@@ -283,15 +283,15 @@ contract NFT is INFT, Ownable{
 
     function updateAuctionDuration(string calldata _artwork_name,
                                                    uint256 _index, // 1 = gold, 0 = original.
-                                                   uint256 _new_duration) public onlyOwner
+                                                   uint256 _new_duration_in_seconds) public onlyOwner
     {
         if(_index == 0)
         {
-            original_auctions[_artwork_name].duration = _new_duration;
+            original_auctions[_artwork_name].duration = _new_duration_in_seconds;
         }
         if(_index == 1)
         {
-            gold_auctions[_artwork_name].duration = _new_duration;
+            gold_auctions[_artwork_name].duration = _new_duration_in_seconds;
         }
     }
 
