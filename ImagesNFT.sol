@@ -174,8 +174,15 @@ contract NFT is INFT, Ownable{
                                // feePercentage of 2500 means 2.5% fee
     }
 
+    struct AuctionParticipant {
+        address winner;
+        uint256 bet;
+        uint256 start_timestamp;
+    }
+
     struct Artwork {
         bool exists;
+
         uint256 num_original;
         uint256 num_gold;
         uint256 num_silver;
@@ -193,7 +200,12 @@ contract NFT is INFT, Ownable{
         string propertyGoldImage; // {"license":"https://mylicense.org"}
     }
 
+    uint256 public auction_duration = 30 days;
+
     mapping (string => Artwork) public artworks;
+
+    mapping (string => AuctionParticipant) public gold_auctions;
+    mapping (string => AuctionParticipant) public original_auctions;
     
     mapping (uint256 => uint256) public _asks; // tokenID => price of this token (in WEI)
     mapping (uint256 => Bid)     public _bids; // tokenID => price of this token (in WEI)
@@ -255,6 +267,16 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].propertyOriginalImage = propertyOriginalImage;
     }
 
+    function rewardsWithdraw() public onlyOwner
+    {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    function modifyArtworkInfo(string memory _artwork_name, string memory _newInfo) public onlyOwner
+    {
+        artworks[_artwork_name].propertyInfo = _newInfo;
+    }
+
     function buyBronze(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
@@ -270,7 +292,7 @@ contract NFT is INFT, Ownable{
 
     function buySilver(string calldata _artwork_name) public payable
     {
-        require(artworks[_artwork_name].num_silver > 0, "All Bronze NFTs of this artwork are already sold");
+        require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
         require(msg.value > artworks[_artwork_name].price_silver, "Insufficient value");
 
         artworks[_artwork_name].num_silver--;
@@ -279,6 +301,88 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertySilverImage );
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
+    }
+
+    function buyOriginal(string calldata _artwork_name) public payable
+    {
+        require(artworks[_artwork_name].num_original > 0, "All Original NFTs of this artwork are already sold");
+        require(msg.value > original_auctions[_artwork_name].bet, "Does not outbid current winner");
+
+        if(original_auctions[_artwork_name].start_timestamp == 0)
+        {
+            startOriginalRound(_artwork_name);
+        }
+        if(original_auctions[_artwork_name].start_timestamp + auction_duration < block.timestamp)
+        {
+            endOriginalRound(_artwork_name);
+        }
+
+        payable(original_auctions[_artwork_name].winner).transfer(original_auctions[_artwork_name].bet);
+
+        original_auctions[_artwork_name].winner = msg.sender;
+        original_auctions[_artwork_name].bet = msg.value;
+    }
+
+    function startOriginalRound(string calldata _artwork_name) internal
+    {
+        original_auctions[_artwork_name].winner = address(0);
+        original_auctions[_artwork_name].bet = 0;
+        original_auctions[_artwork_name].start_timestamp = block.timestamp;
+    }
+
+    function endOriginalRound(string calldata _artwork_name) public
+    {
+        artworks[_artwork_name].num_original--;
+
+        _mintNext(msg.sender);
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
+
+        if(artworks[_artwork_name].num_original != 0)
+        {
+            startOriginalRound(_artwork_name);
+        }
+    }
+
+    function buyGold(string calldata _artwork_name) public payable
+    {
+        require(artworks[_artwork_name].num_gold > 0, "All Gold NFTs of this artwork are already sold");
+        require(msg.value > gold_auctions[_artwork_name].bet, "Does not outbid current winner");
+
+        if(gold_auctions[_artwork_name].start_timestamp == 0)
+        {
+            startGoldRound(_artwork_name);
+        }
+        if(gold_auctions[_artwork_name].start_timestamp + auction_duration < block.timestamp)
+        {
+            endGoldRound(_artwork_name);
+        }
+
+        payable(gold_auctions[_artwork_name].winner).transfer(gold_auctions[_artwork_name].bet);
+
+        gold_auctions[_artwork_name].winner = msg.sender;
+        gold_auctions[_artwork_name].bet = msg.value;
+    }
+
+    function startGoldRound(string calldata _artwork_name) internal
+    {
+        gold_auctions[_artwork_name].winner = address(0);
+        gold_auctions[_artwork_name].bet = 0;
+        gold_auctions[_artwork_name].start_timestamp = block.timestamp;
+    }
+
+    function endGoldRound(string calldata _artwork_name) public
+    {
+        artworks[_artwork_name].num_gold--;
+
+        _mintNext(msg.sender);
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
+
+        if(artworks[_artwork_name].num_gold != 0)
+        {
+            startGoldRound(_artwork_name);
+        }
     }
     
     modifier checkTrade(uint256 _tokenId)
