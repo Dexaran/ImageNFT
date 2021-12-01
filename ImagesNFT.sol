@@ -174,10 +174,11 @@ contract NFT is INFT, Ownable{
                                // feePercentage of 2500 means 2.5% fee
     }
 
-    struct AuctionParticipant {
+    struct Auction {
         address winner;
         uint256 bet;
         uint256 start_timestamp;
+        uint256 duration;
     }
 
     struct Artwork {
@@ -200,12 +201,12 @@ contract NFT is INFT, Ownable{
         string propertyGoldImage; // {"license":"https://mylicense.org"}
     }
 
-    uint256 public auction_duration = 30 days;
+    uint256 public default_auction_duration = 30 days;
 
     mapping (string => Artwork) public artworks;
 
-    mapping (string => AuctionParticipant) public gold_auctions;
-    mapping (string => AuctionParticipant) public original_auctions;
+    mapping (string => Auction) public gold_auctions;
+    mapping (string => Auction) public original_auctions;
     
     mapping (uint256 => uint256) public _asks; // tokenID => price of this token (in WEI)
     mapping (uint256 => Bid)     public _bids; // tokenID => price of this token (in WEI)
@@ -265,6 +266,9 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].propertyGoldImage = propertyGoldImage;
         artworks[_artwork_name].propertySilverImage = propertySilverImage;
         artworks[_artwork_name].propertyOriginalImage = propertyOriginalImage;
+
+        gold_auctions[_artwork_name].duration = default_auction_duration;
+        original_auctions[_artwork_name].duration = default_auction_duration;
     }
 
     function rewardsWithdraw() public onlyOwner
@@ -277,10 +281,24 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].propertyInfo = _newInfo;
     }
 
+    function updateAuctionDuration(string calldata _artwork_name,
+                                                   uint256 _index, // 1 = gold, 0 = original.
+                                                   uint256 _new_duration) public onlyOwner
+    {
+        if(_index == 0)
+        {
+            original_auctions[_artwork_name].duration = _new_duration;
+        }
+        if(_index == 1)
+        {
+            gold_auctions[_artwork_name].duration = _new_duration;
+        }
+    }
+
     function buyBronze(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
-        require(msg.value >= artworks[_artwork_name].price_bronze, "Insufficient value");
+        require(msg.value > artworks[_artwork_name].price_bronze, "Insufficient value");
 
         artworks[_artwork_name].num_bronze--;
 
@@ -293,7 +311,7 @@ contract NFT is INFT, Ownable{
     function buySilver(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
-        require(msg.value >= artworks[_artwork_name].price_silver, "Insufficient value");
+        require(msg.value > artworks[_artwork_name].price_silver, "Insufficient value");
 
         artworks[_artwork_name].num_silver--;
 
@@ -312,7 +330,7 @@ contract NFT is INFT, Ownable{
         {
             startOriginalRound(_artwork_name);
         }
-        if(original_auctions[_artwork_name].start_timestamp + auction_duration < block.timestamp)
+        if(original_auctions[_artwork_name].start_timestamp + original_auctions[_artwork_name].duration < block.timestamp)
         {
             endOriginalRound(_artwork_name);
         }
@@ -353,7 +371,7 @@ contract NFT is INFT, Ownable{
         {
             startGoldRound(_artwork_name);
         }
-        if(gold_auctions[_artwork_name].start_timestamp + auction_duration < block.timestamp)
+        if(gold_auctions[_artwork_name].start_timestamp + gold_auctions[_artwork_name].duration < block.timestamp)
         {
             endGoldRound(_artwork_name);
         }
