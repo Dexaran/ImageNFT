@@ -280,7 +280,7 @@ contract NFT is INFT, Ownable{
     function buyBronze(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
-        require(msg.value > artworks[_artwork_name].price_bronze, "Insufficient value");
+        require(msg.value >= artworks[_artwork_name].price_bronze, "Insufficient value");
 
         artworks[_artwork_name].num_bronze--;
 
@@ -293,7 +293,7 @@ contract NFT is INFT, Ownable{
     function buySilver(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
-        require(msg.value > artworks[_artwork_name].price_silver, "Insufficient value");
+        require(msg.value >= artworks[_artwork_name].price_silver, "Insufficient value");
 
         artworks[_artwork_name].num_silver--;
 
