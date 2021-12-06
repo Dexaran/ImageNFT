@@ -350,6 +350,7 @@ contract NFT is INFT, Ownable{
 
     function endOriginalRound(string calldata _artwork_name) public
     {
+        require(block.timestamp > original_auctions[_artwork_name].start_timestamp + original_auctions[_artwork_name].duration, "Auction is still in progress");
         artworks[_artwork_name].num_original--;
 
         /*_mintNext(msg.sender);
