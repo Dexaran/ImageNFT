@@ -397,6 +397,27 @@ contract NFT is INFT, Ownable{
 
     function endGoldRound(string calldata _artwork_name) public
     {
+        require(block.timestamp > gold_auctions[_artwork_name].start_timestamp + gold_auctions[_artwork_name].duration, "Auction is still in progress");
+        artworks[_artwork_name].num_gold--;
+
+        /*_mintNext(msg.sender);
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
+        */
+
+        _mintNext(gold_auctions[_artwork_name].winner);
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
+
+        if(artworks[_artwork_name].num_gold != 0)
+        {
+            startGoldRound(_artwork_name);
+        }
+    }
+
+/*
+    function endGoldRound(string calldata _artwork_name) public
+    {
         artworks[_artwork_name].num_gold--;
 
         _mintNext(msg.sender);
@@ -408,6 +429,7 @@ contract NFT is INFT, Ownable{
             startGoldRound(_artwork_name);
         }
     }
+    */
     
     modifier checkTrade(uint256 _tokenId)
     {
