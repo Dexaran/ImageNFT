@@ -352,7 +352,12 @@ contract NFT is INFT, Ownable{
     {
         artworks[_artwork_name].num_original--;
 
-        _mintNext(msg.sender);
+        /*_mintNext(msg.sender);
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
+        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
+        */
+
+        _mintNext(original_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
 
