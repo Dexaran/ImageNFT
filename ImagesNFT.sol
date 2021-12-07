@@ -242,10 +242,14 @@ contract NFT is INFT, Ownable{
         default_auction_duration = _newDuration;
     }
 
-    function assignMinPrices(string memory _artwork_name, uint256 _goldMinPrice, uint256 _originalMinPrice) public onlyOwner
+    function configureAuction(string memory _artwork_name, uint256 _goldMinPrice, uint256 _originalMinPrice, uint256 _goldStartTimestamp, uint256 _originalStartTimestamp) public onlyOwner
     {
         gold_auctions[_artwork_name].min_price = _goldMinPrice;
+        gold_auctions[_artwork_name].start_timestamp = _goldStartTimestamp;
+
         original_auctions[_artwork_name].min_price = _originalMinPrice;
+        original_auctions[_artwork_name].start_timestamp = _originalStartTimestamp;
+
     }
 
     function addArtwork(string memory _artwork_name,
@@ -334,6 +338,7 @@ contract NFT is INFT, Ownable{
 
     function buyOriginal(string calldata _artwork_name) public payable
     {
+        require(original_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
         if(original_auctions[_artwork_name].start_timestamp == 0)
         {
             startOriginalRound(_artwork_name);
@@ -358,7 +363,7 @@ contract NFT is INFT, Ownable{
     {
         original_auctions[_artwork_name].winner = address(0);
         original_auctions[_artwork_name].bet = 0;
-        original_auctions[_artwork_name].start_timestamp = block.timestamp;
+        original_auctions[_artwork_name].start_timestamp += original_auctions[_artwork_name].duration;
     }
 
     function endOriginalRound(string calldata _artwork_name) public
@@ -383,6 +388,7 @@ contract NFT is INFT, Ownable{
 
     function buyGold(string calldata _artwork_name) public payable
     {
+        require(gold_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
         if(gold_auctions[_artwork_name].start_timestamp == 0)
         {
             startGoldRound(_artwork_name);
@@ -407,7 +413,7 @@ contract NFT is INFT, Ownable{
     {
         gold_auctions[_artwork_name].winner = address(0);
         gold_auctions[_artwork_name].bet = 0;
-        gold_auctions[_artwork_name].start_timestamp = block.timestamp;
+        gold_auctions[_artwork_name].start_timestamp += gold_auctions[_artwork_name].duration;
     }
 
     function endGoldRound(string calldata _artwork_name) public
