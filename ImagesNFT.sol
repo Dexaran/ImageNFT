@@ -334,11 +334,6 @@ contract NFT is INFT, Ownable{
 
     function buyOriginal(string calldata _artwork_name) public payable
     {
-        require(artworks[_artwork_name].num_original > 0, "All Original NFTs of this artwork are already sold");
-        require(msg.value > original_auctions[_artwork_name].bet, "Does not outbid current winner");
-        require(original_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
-        require(msg.value > original_auctions[_artwork_name].min_price, "Min price criteria is not met");
-
         if(original_auctions[_artwork_name].start_timestamp == 0)
         {
             startOriginalRound(_artwork_name);
@@ -347,6 +342,11 @@ contract NFT is INFT, Ownable{
         {
             endOriginalRound(_artwork_name);
         }
+
+        require(artworks[_artwork_name].num_original > 0, "All Original NFTs of this artwork are already sold");
+        require(msg.value > original_auctions[_artwork_name].bet, "Does not outbid current winner");
+        require(original_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
+        require(msg.value > original_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
         payable(original_auctions[_artwork_name].winner).transfer(original_auctions[_artwork_name].bet);
 
@@ -383,11 +383,6 @@ contract NFT is INFT, Ownable{
 
     function buyGold(string calldata _artwork_name) public payable
     {
-        require(artworks[_artwork_name].num_gold > 0, "All Gold NFTs of this artwork are already sold");
-        require(msg.value > gold_auctions[_artwork_name].bet, "Does not outbid current winner");
-        require(gold_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
-        require(msg.value > gold_auctions[_artwork_name].min_price, "Min price criteria is not met");
-
         if(gold_auctions[_artwork_name].start_timestamp == 0)
         {
             startGoldRound(_artwork_name);
@@ -396,6 +391,11 @@ contract NFT is INFT, Ownable{
         {
             endGoldRound(_artwork_name);
         }
+
+        require(artworks[_artwork_name].num_gold > 0, "All Gold NFTs of this artwork are already sold");
+        require(msg.value > gold_auctions[_artwork_name].bet, "Does not outbid current winner");
+        require(gold_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
+        require(msg.value > gold_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
         payable(gold_auctions[_artwork_name].winner).transfer(gold_auctions[_artwork_name].bet);
 
