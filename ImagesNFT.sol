@@ -204,6 +204,8 @@ contract NFT is INFT, Ownable{
 
     uint256 public default_auction_duration = 30 days;
 
+    uint256 public revenue;
+
     mapping (string => Artwork) public artworks;
 
     mapping (string => Auction) public gold_auctions;
@@ -288,7 +290,9 @@ contract NFT is INFT, Ownable{
 
     function rewardsWithdraw() public onlyOwner
     {
-        payable(msg.sender).transfer(address(this).balance);
+        uint256 _revenue = revenue;
+        revenue = 0;
+        payable(msg.sender).transfer(_revenue);
     }
 
     function modifyArtworkInfo(string memory _artwork_name, string memory _newInfo) public onlyOwner
@@ -315,6 +319,8 @@ contract NFT is INFT, Ownable{
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
         require(msg.value > artworks[_artwork_name].price_bronze, "Insufficient value");
 
+        revenue += msg.value;
+
         artworks[_artwork_name].num_bronze--;
 
         _mintNext(msg.sender);
@@ -328,6 +334,8 @@ contract NFT is INFT, Ownable{
         require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
         require(msg.value > artworks[_artwork_name].price_silver, "Insufficient value");
 
+        revenue += msg.value;
+
         artworks[_artwork_name].num_silver--;
 
         _mintNext(msg.sender);
@@ -338,6 +346,8 @@ contract NFT is INFT, Ownable{
 
     function buyOriginal(string calldata _artwork_name) public payable
     {
+        revenue += msg.value;
+
         require(original_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
         if(original_auctions[_artwork_name].start_timestamp == 0)
         {
@@ -388,6 +398,8 @@ contract NFT is INFT, Ownable{
 
     function buyGold(string calldata _artwork_name) public payable
     {
+        revenue += msg.value;
+
         require(gold_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
         if(gold_auctions[_artwork_name].start_timestamp == 0)
         {
