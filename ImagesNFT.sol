@@ -206,6 +206,9 @@ contract NFT is INFT, Ownable{
 
     uint256 public revenue;
 
+    mapping (uint256 => string) public artwork_names_list;
+    uint256 public artworks_count;
+
     mapping (string => Artwork) public artworks;
 
     mapping (string => Auction) public gold_auctions;
@@ -286,6 +289,9 @@ contract NFT is INFT, Ownable{
 
         gold_auctions[_artwork_name].duration = default_auction_duration;
         original_auctions[_artwork_name].duration = default_auction_duration;
+
+        artwork_names_list[artworks_count] = _artwork_name;
+        artworks_count++;
     }
 
     function rewardsWithdraw() public onlyOwner
