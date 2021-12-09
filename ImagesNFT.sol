@@ -36,16 +36,16 @@ abstract contract Context {
 }
 
 abstract contract Ownable is Context {
-    address private _owner;
+    address internal _owner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
-     */
     constructor() {
         _transferOwnership(_msgSender());
     }
+    */
 
     /**
      * @dev Returns the address of the current owner.
@@ -159,7 +159,7 @@ contract NFT is INFT, Ownable{
     mapping (uint256 => Properties) private _tokenProperties;
     mapping (uint32 => Fee)         public feeLevels; // level # => (fee receiver, fee percentage)
     
-    uint256 public bidLock = 1 days; // Time required for a bid to become withdrawable.
+    uint256 public bidLock; // = 1 days; // Time required for a bid to become withdrawable.
     
     struct Bid {
         address payable bidder;
@@ -202,7 +202,7 @@ contract NFT is INFT, Ownable{
         string propertyGoldImage; // {"license":"https://mylicense.org"}
     }
 
-    uint256 public default_auction_duration = 30 days;
+    uint256 public default_auction_duration; // = 30 days;
 
     uint256 public revenue;
 
@@ -234,8 +234,20 @@ contract NFT is INFT, Ownable{
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
-     */
     constructor(string memory name_, string memory symbol_, uint256 _defaultFee) {
+        _name   = name_;
+        _symbol = symbol_;
+        feeLevels[0].feeReceiver   = payable(msg.sender);
+        feeLevels[0].feePercentage = _defaultFee;
+    }
+     */
+
+    function initialize(string memory name_, string memory symbol_, uint256 _defaultFee) external {
+        require(_owner == address(0), "Already initialized");
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), msg.sender);
+        bidLock = 1 days;
+        default_auction_duration = 30 days;
         _name   = name_;
         _symbol = symbol_;
         feeLevels[0].feeReceiver   = payable(msg.sender);
