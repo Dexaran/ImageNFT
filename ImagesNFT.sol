@@ -330,6 +330,10 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].propertyInfo = _newInfo;
     }
 
+    function modifyTokenClass(uint256 _tokenId, string memory _tokenClass) public onlyOwner {
+       _tokenProperties[_tokenId].properties[2] = _tokenClass;  
+    }
+
     function updateAuctionDuration(string calldata _artwork_name,
                                                    uint256 _index, // 1 = gold, 0 = original.
                                                    uint256 _new_duration_in_seconds) public onlyOwner
@@ -356,6 +360,7 @@ contract NFT is INFT, Ownable{
         _mintNext(msg.sender);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyBronzeImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Bronze" );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
@@ -372,6 +377,7 @@ contract NFT is INFT, Ownable{
         _mintNext(msg.sender);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertySilverImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Silver" );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
@@ -421,6 +427,7 @@ contract NFT is INFT, Ownable{
         _mintNext(original_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Original" );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_original != 0)
@@ -474,6 +481,7 @@ contract NFT is INFT, Ownable{
         _mintNext(gold_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Gold" );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_gold != 0)
