@@ -702,7 +702,7 @@ contract NFT is INFT, Ownable{
         uint256 tokenId,
         bytes memory _data
     ) public virtual {
-        require(NFT.ownerOf(tokenId) == from, "NFT: transfer of token that is not own");
+        require(NFT.ownerOf(tokenId) == msg.sender, "NFT: transfer of token that is not own");
         _safeTransfer(from, to, tokenId, _data);
     }
 
