@@ -672,7 +672,7 @@ contract NFT is INFT, Ownable{
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(NFT.ownerOf(tokenId) == from, "NFT: transfer of token that is not own");
+        require(NFT.ownerOf(tokenId) == msg.sender, "NFT: transfer of token that is not own");
         require(to != address(0), "NFT: transfer to the zero address");
         
         _asks[tokenId] = 0; // Zero out price on transfer
