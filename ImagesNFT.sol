@@ -235,6 +235,22 @@ contract NFT is INFT, Ownable{
     // Mapping artwork address to artist fee level
     mapping (string => uint32) public artworkFeeReceiver;
 
+    struct ArtworkMaxCap {
+        uint256 num_original;
+        uint256 num_gold;
+        uint256 num_silver;
+        uint256 num_bronze;
+    }
+
+    mapping (string => ArtworkMaxCap) public artworksMaxCap;
+
+    // Mapping artwork to start sale timestamp
+    mapping (string => uint256) public silverStartSaleTimestamps;
+    mapping (string => uint256) public bronzeStartSaleTimestamps;
+
+    //Admins list
+    mapping (address => bool) public admins;
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
     constructor(string memory name_, string memory symbol_, uint256 _defaultFee) {
@@ -243,7 +259,7 @@ contract NFT is INFT, Ownable{
         feeLevels[0].feeReceiver   = payable(msg.sender);
         feeLevels[0].feePercentage = _defaultFee;
     }
-     */
+    */
 
     function initialize(string memory name_, string memory symbol_, uint256 _defaultFee) external {
         require(_owner == address(0), "Already initialized");
@@ -257,18 +273,36 @@ contract NFT is INFT, Ownable{
         feeLevels[0].feePercentage = _defaultFee;
     }
 
-    function changeDefaultAuctionDurtion(uint256 _newDuration) public onlyOwner
+    function addAdmin (address _newAdmin) public onlyOwner {
+        admins[_newAdmin] = true;
+    }
+
+    function removeAdmin (address _admin) public onlyOwner {
+        admins[_admin] = false;
+    }
+
+    function changeDefaultAuctionDuration(uint256 _newDuration) public onlyOwner
     {
         default_auction_duration = _newDuration;
     }
 
-    function configureAuction(string memory _artwork_name, uint256 _goldMinPrice, uint256 _originalMinPrice, uint256 _goldStartTimestamp, uint256 _originalStartTimestamp) public onlyOwner
+    function configureAuction(
+        string memory _artwork_name, 
+        uint256 _goldMinPrice, 
+        uint256 _originalMinPrice, 
+        uint256 _goldStartTimestamp, 
+        uint256 _originalStartTimestamp,
+        uint256 _duration_in_seconds
+        ) public onlyOwner
     {
         gold_auctions[_artwork_name].min_price = _goldMinPrice;
         gold_auctions[_artwork_name].start_timestamp = _goldStartTimestamp;
 
         original_auctions[_artwork_name].min_price = _originalMinPrice;
         original_auctions[_artwork_name].start_timestamp = _originalStartTimestamp;
+
+        original_auctions[_artwork_name].duration = _duration_in_seconds;
+        gold_auctions[_artwork_name].duration = _duration_in_seconds;
 
     }
 
@@ -301,7 +335,12 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].num_gold     = num_gold;
         artworks[_artwork_name].num_silver   = num_silver;
         artworks[_artwork_name].num_bronze   = num_bronze;
-        
+
+        artworksMaxCap[_artwork_name].num_original = num_original;
+        artworksMaxCap[_artwork_name].num_gold     = num_gold;
+        artworksMaxCap[_artwork_name].num_silver   = num_silver;
+        artworksMaxCap[_artwork_name].num_bronze   = num_bronze;
+
         artworks[_artwork_name].price_silver = price_silver;
         artworks[_artwork_name].price_bronze = price_bronze;
 
@@ -318,6 +357,11 @@ contract NFT is INFT, Ownable{
         artworks_count++;
     }
 
+    function addStartSaleTimestamp(string memory _artwork_name, uint256 silver_start_sales_timestamp, uint256 bronze_start_sales_timestamp) public onlyOwner{
+        silverStartSaleTimestamps[_artwork_name] = silver_start_sales_timestamp;
+        bronzeStartSaleTimestamps[_artwork_name] = bronze_start_sales_timestamp;
+    }
+
     function rewardsWithdraw() public onlyOwner
     {
         uint256 _revenue = revenue;
@@ -325,13 +369,48 @@ contract NFT is INFT, Ownable{
         payable(msg.sender).transfer(_revenue);
     }
 
+    //Remove after debbugin period
     function modifyArtworkInfo(string memory _artwork_name, string memory _newInfo) public onlyOwner
     {
         artworks[_artwork_name].propertyInfo = _newInfo;
     }
 
-    function modifyTokenClass(uint256 _tokenId, string memory _tokenClass) public onlyOwner {
+    //Remove after debbugin period
+    function addTokenClassAndSerialNumber(uint256 _tokenId, string memory _tokenClass , string memory _serialNumber) public {
+        require(admins[msg.sender],"You are not an admin");
+        if(_tokenProperties[_tokenId].properties.length == 2){
+            _tokenProperties[_tokenId].properties.push(_tokenClass);
+            _tokenProperties[_tokenId].properties.push(_serialNumber);  
+        }
+        if(_tokenProperties[_tokenId].properties.length == 3){
+            _tokenProperties[_tokenId].properties.push(_serialNumber);  
+        }
+    }
+
+    //Remove after debbugin period
+    function modifyTokenClass(uint256 _tokenId, string memory _tokenClass) public {
+        require(admins[msg.sender],"You are not an admin");
        _tokenProperties[_tokenId].properties[2] = _tokenClass;  
+    }
+
+    //Remove after debbugin period
+    function modifySerialNumber(uint256 _tokenId, string memory _serialNumber) public {
+        require(admins[msg.sender],"You are not an admin");
+       _tokenProperties[_tokenId].properties[3] = _serialNumber;  
+    }
+
+    //Remove after debbugin period
+    function addArtworkMaxCap (
+        string memory _artwork_name,
+        uint256 num_original,
+        uint256 num_gold,
+        uint256 num_silver,
+        uint256 num_bronze
+    )public onlyOwner{
+        artworksMaxCap[_artwork_name].num_original = num_original;
+        artworksMaxCap[_artwork_name].num_gold     = num_gold;
+        artworksMaxCap[_artwork_name].num_silver   = num_silver;
+        artworksMaxCap[_artwork_name].num_bronze   = num_bronze;
     }
 
     function updateAuctionDuration(string calldata _artwork_name,
@@ -351,7 +430,8 @@ contract NFT is INFT, Ownable{
     function buyBronze(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
-        require(msg.value > artworks[_artwork_name].price_bronze, "Insufficient value");
+        require(msg.value >= artworks[_artwork_name].price_bronze, "Insufficient value");
+        require(block.timestamp >= bronzeStartSaleTimestamps[_artwork_name], "Sale has not begun");
 
         revenue += msg.value;
 
@@ -361,6 +441,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyBronzeImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Bronze" );
+        _tokenProperties[last_minted_id - 1].properties.push( toString(artworksMaxCap[_artwork_name].num_bronze - artworks[_artwork_name].num_bronze) );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
@@ -368,7 +449,8 @@ contract NFT is INFT, Ownable{
     function buySilver(string calldata _artwork_name) public payable
     {
         require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
-        require(msg.value > artworks[_artwork_name].price_silver, "Insufficient value");
+        require(msg.value >= artworks[_artwork_name].price_silver, "Insufficient value");
+        require(block.timestamp >= silverStartSaleTimestamps[_artwork_name], "Sale has not begun");
 
         revenue += msg.value;
 
@@ -378,6 +460,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertySilverImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Silver" );
+        _tokenProperties[last_minted_id - 1].properties.push( toString(artworksMaxCap[_artwork_name].num_silver - artworks[_artwork_name].num_silver) );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
@@ -397,7 +480,11 @@ contract NFT is INFT, Ownable{
         }
 
         require(artworks[_artwork_name].num_original > 0, "All Original NFTs of this artwork are already sold");
-        require(msg.value > original_auctions[_artwork_name].bet, "Does not outbid current winner");
+        require(
+            msg.value >= original_auctions[_artwork_name].bet + original_auctions[_artwork_name].bet/20 && 
+            msg.value >= original_auctions[_artwork_name].bet + 1000000000000000000,
+            "Does not outbid current winner by %5"
+        );
         require(original_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
         require(msg.value > original_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
@@ -428,6 +515,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Original" );
+        _tokenProperties[last_minted_id - 1].properties.push( "1" );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_original != 0)
@@ -451,7 +539,11 @@ contract NFT is INFT, Ownable{
         }
 
         require(artworks[_artwork_name].num_gold > 0, "All Gold NFTs of this artwork are already sold");
-        require(msg.value > gold_auctions[_artwork_name].bet, "Does not outbid current winner");
+        require(
+            msg.value >= gold_auctions[_artwork_name].bet + gold_auctions[_artwork_name].bet/20 && 
+            msg.value >= gold_auctions[_artwork_name].bet + 1000000000000000000,
+            "Does not outbid current winner by %5"
+        );
         require(gold_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
         require(msg.value > gold_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
@@ -482,6 +574,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Gold" );
+        _tokenProperties[last_minted_id - 1].properties.push( toString(artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold) );
         _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_gold != 0)
@@ -726,7 +819,7 @@ contract NFT is INFT, Ownable{
         uint256 tokenId,
         bytes memory _data
     ) public virtual {
-        require(NFT.ownerOf(tokenId) == msg.sender, "NFT: transfer of token that is not own");
+        require(NFT.ownerOf(tokenId) == from, "NFT: transfer of token that is not own");
         _safeTransfer(from, to, tokenId, _data);
     }
 
@@ -761,5 +854,28 @@ contract NFT is INFT, Ownable{
         } else {
             return true;
         }
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        // Inspired by OraclizeAPI's implementation - MIT licence
+        // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol#L15-L35
+
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }
