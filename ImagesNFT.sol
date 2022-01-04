@@ -413,10 +413,11 @@ contract NFT is INFT, Ownable{
         artworksMaxCap[_artwork_name].num_bronze   = num_bronze;
     }
 
-    function updateAuctionDuration(string calldata _artwork_name,
-                                                   uint256 _index, // 1 = gold, 0 = original.
-                                                   uint256 _new_duration_in_seconds) public onlyOwner
-    {
+    function updateAuctionDuration(
+        string calldata _artwork_name,
+        uint256 _index, // 1 = gold, 0 = original.
+        uint256 _new_duration_in_seconds
+    ) public onlyOwner{
         if(_index == 0)
         {
             original_auctions[_artwork_name].duration = _new_duration_in_seconds;
@@ -819,7 +820,6 @@ contract NFT is INFT, Ownable{
         uint256 tokenId,
         bytes memory _data
     ) public virtual {
-        require(NFT.ownerOf(tokenId) == msg.sender, "NFT: transfer of token that is not own");
         _safeTransfer(from, to, tokenId, _data);
     }
 
