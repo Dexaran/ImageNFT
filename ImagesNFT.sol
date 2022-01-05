@@ -292,7 +292,8 @@ contract NFT is INFT, Ownable{
         uint256 _originalMinPrice, 
         uint256 _goldStartTimestamp, 
         uint256 _originalStartTimestamp,
-        uint256 _duration_in_seconds
+        uint256 _gold_duration_in_seconds,
+        uint256 _original_duration_in_seconds
         ) public onlyOwner
     {
         gold_auctions[_artwork_name].min_price = _goldMinPrice;
@@ -301,8 +302,8 @@ contract NFT is INFT, Ownable{
         original_auctions[_artwork_name].min_price = _originalMinPrice;
         original_auctions[_artwork_name].start_timestamp = _originalStartTimestamp;
 
-        original_auctions[_artwork_name].duration = _duration_in_seconds;
-        gold_auctions[_artwork_name].duration = _duration_in_seconds;
+        original_auctions[_artwork_name].duration = _original_duration_in_seconds;
+        gold_auctions[_artwork_name].duration = _gold_duration_in_seconds;
 
     }
 
@@ -433,7 +434,7 @@ contract NFT is INFT, Ownable{
         require(artworks[_artwork_name].num_bronze > 0, "All Bronze NFTs of this artwork are already sold");
         require(msg.value >= artworks[_artwork_name].price_bronze, "Insufficient value");
         require(block.timestamp >= bronzeStartSaleTimestamps[_artwork_name], "Sale has not begun");
-
+        require(bronzeStartSaleTimestamps[_artwork_name] != 0, "Start sale timestamp has not been set");
         revenue += msg.value;
 
         artworks[_artwork_name].num_bronze--;
@@ -452,6 +453,7 @@ contract NFT is INFT, Ownable{
         require(artworks[_artwork_name].num_silver > 0, "All Silver NFTs of this artwork are already sold");
         require(msg.value >= artworks[_artwork_name].price_silver, "Insufficient value");
         require(block.timestamp >= silverStartSaleTimestamps[_artwork_name], "Sale has not begun");
+        require(silverStartSaleTimestamps[_artwork_name] != 0, "Start sale timestamp has not been set");
 
         revenue += msg.value;
 
