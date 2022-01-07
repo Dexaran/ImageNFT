@@ -251,6 +251,8 @@ contract NFT is INFT, Ownable{
     //Admins list
     mapping (address => bool) public admins;
 
+    event bid(address _bidder, uint256 _bid);
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
     constructor(string memory name_, string memory symbol_, uint256 _defaultFee) {
@@ -356,6 +358,16 @@ contract NFT is INFT, Ownable{
 
         artwork_names_list[artworks_count] = _artwork_name;
         artworks_count++;
+    }
+
+    function deleteArtwork(string memory _artwork_name, uint256 _artwork_number) public onlyOwner{
+        delete artworks[_artwork_name];
+        delete artworksMaxCap[_artwork_name];
+        delete gold_auctions[_artwork_name];
+        delete original_auctions[_artwork_name];
+        delete silverStartSaleTimestamps[_artwork_name];
+        delete bronzeStartSaleTimestamps[_artwork_name];
+        delete artwork_names_list[_artwork_number];
     }
 
     function addStartSaleTimestamp(string memory _artwork_name, uint256 silver_start_sales_timestamp, uint256 bronze_start_sales_timestamp) public onlyOwner{
@@ -486,15 +498,16 @@ contract NFT is INFT, Ownable{
         require(
             msg.value >= original_auctions[_artwork_name].bet + original_auctions[_artwork_name].bet/20 && 
             msg.value >= original_auctions[_artwork_name].bet + 1000000000000000000,
-            "Does not outbid current winner by %5"
+            "Does not outbid current winner by 5%"
         );
         require(original_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
-        require(msg.value > original_auctions[_artwork_name].min_price, "Min price criteria is not met");
+        require(msg.value >= original_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
         payable(original_auctions[_artwork_name].winner).transfer(original_auctions[_artwork_name].bet);
 
         original_auctions[_artwork_name].winner = msg.sender;
         original_auctions[_artwork_name].bet = msg.value;
+        emit bid(msg.sender,msg.value);
     }
 
     function startOriginalRound(string calldata _artwork_name) internal
@@ -545,15 +558,16 @@ contract NFT is INFT, Ownable{
         require(
             msg.value >= gold_auctions[_artwork_name].bet + gold_auctions[_artwork_name].bet/20 && 
             msg.value >= gold_auctions[_artwork_name].bet + 1000000000000000000,
-            "Does not outbid current winner by %5"
+            "Does not outbid current winner by 5%"
         );
         require(gold_auctions[_artwork_name].min_price != 0, "Min price is not configured by the owner");
-        require(msg.value > gold_auctions[_artwork_name].min_price, "Min price criteria is not met");
+        require(msg.value >= gold_auctions[_artwork_name].min_price, "Min price criteria is not met");
 
         payable(gold_auctions[_artwork_name].winner).transfer(gold_auctions[_artwork_name].bet);
 
         gold_auctions[_artwork_name].winner = msg.sender;
         gold_auctions[_artwork_name].bet = msg.value;
+        emit bid(msg.sender,msg.value);
     }
 
     function startGoldRound(string calldata _artwork_name) internal
@@ -796,17 +810,6 @@ contract NFT is INFT, Ownable{
         address to,
         uint256 tokenId
     ) internal virtual {}
-
-    //Custom Code
-    function mint (address _to, uint256 _tokenId, string memory _tokenImage, string memory _tokenArtist) external onlyOwner{
-        _mint(_to, _tokenId);
-        _tokenProperties[_tokenId].properties.push(_tokenImage);
-        _tokenProperties[_tokenId].properties.push(_tokenArtist);
-    }
-
-    function setFeeReceiver (address _address) public onlyOwner {
-        feeLevels[0].feeReceiver   = payable(_address);
-    }
 
     function safeTransferFrom(
         address from,
