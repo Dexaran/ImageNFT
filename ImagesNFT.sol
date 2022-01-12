@@ -69,10 +69,11 @@ abstract contract Ownable is Context {
      * NOTE: Renouncing ownership will leave the contract without an owner,
      * thereby removing any functionality that is only available to the owner.
      */
+    /*
     function renounceOwnership() public virtual onlyOwner {
         _transferOwnership(address(0));
     }
-
+    */
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the current owner.
@@ -254,8 +255,6 @@ contract NFT is INFT, Ownable{
     event bid(
         address _bidder,
         uint256 _bid,
-        string _artwork,
-        string _class,
         uint256 _round,
         uint256 _start,
         uint256 _duration
@@ -512,8 +511,6 @@ contract NFT is INFT, Ownable{
         emit bid(
             msg.sender,
             msg.value,
-            _artwork_name,
-            "Original",
             artworksMaxCap[_artwork_name].num_original - artworks[_artwork_name].num_original + 1,
             original_auctions[_artwork_name].start_timestamp,
             original_auctions[_artwork_name].duration
@@ -572,8 +569,6 @@ contract NFT is INFT, Ownable{
         emit bid(
             msg.sender,
             msg.value,
-            _artwork_name,
-            "Gold",
             artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold + 1,
             original_auctions[_artwork_name].start_timestamp,
             original_auctions[_artwork_name].duration
@@ -606,7 +601,7 @@ contract NFT is INFT, Ownable{
         }
     }
 
-/*
+    /*
     function endGoldRound(string calldata _artwork_name) public
     {
         artworks[_artwork_name].num_gold--;
