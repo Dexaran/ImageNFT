@@ -251,7 +251,15 @@ contract NFT is INFT, Ownable{
     //Admins list
     mapping (address => bool) public admins;
 
-    event bid(address _bidder, uint256 _bid);
+    event bid(
+        address _bidder,
+        uint256 _bid,
+        string _artwork,
+        string _class,
+        uint256 _round,
+        uint256 _start,
+        uint256 _duration
+    );
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -501,7 +509,15 @@ contract NFT is INFT, Ownable{
 
         original_auctions[_artwork_name].winner = msg.sender;
         original_auctions[_artwork_name].bet = msg.value;
-        emit bid(msg.sender,msg.value);
+        emit bid(
+            msg.sender,
+            msg.value,
+            _artwork_name,
+            "Original",
+            artworksMaxCap[_artwork_name].num_original - artworks[_artwork_name].num_original + 1,
+            original_auctions[_artwork_name].start_timestamp,
+            original_auctions[_artwork_name].duration
+        );
     }
 
     function resetOriginalRound(string calldata _artwork_name) internal
@@ -555,7 +571,15 @@ contract NFT is INFT, Ownable{
 
         gold_auctions[_artwork_name].winner = msg.sender;
         gold_auctions[_artwork_name].bet = msg.value;
-        emit bid(msg.sender,msg.value);
+        emit bid(
+            msg.sender,
+            msg.value,
+            _artwork_name,
+            "Gold",
+            artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold + 1,
+            original_auctions[_artwork_name].start_timestamp,
+            original_auctions[_artwork_name].duration
+        );
     }
 
     function resetGoldRound(string calldata _artwork_name) internal
