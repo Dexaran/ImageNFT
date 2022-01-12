@@ -524,9 +524,7 @@ contract NFT is INFT, Ownable{
     {
         original_auctions[_artwork_name].winner = address(0);
         original_auctions[_artwork_name].bet = 0;
-        if(original_auctions[_artwork_name].start_timestamp == 0){
-            original_auctions[_artwork_name].start_timestamp = block.timestamp;
-        }     
+        original_auctions[_artwork_name].start_timestamp = block.timestamp;
     }
 
     function endOriginalRound(string calldata _artwork_name) public
@@ -586,9 +584,7 @@ contract NFT is INFT, Ownable{
     {
         gold_auctions[_artwork_name].winner = address(0);
         gold_auctions[_artwork_name].bet = 0;
-        if(gold_auctions[_artwork_name].start_timestamp == 0){
-            gold_auctions[_artwork_name].start_timestamp = block.timestamp;
-        }
+        gold_auctions[_artwork_name].start_timestamp = block.timestamp;
     }
 
     function endGoldRound(string calldata _artwork_name) public
