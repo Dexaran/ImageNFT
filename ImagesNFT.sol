@@ -29,10 +29,6 @@ abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
     }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
 }
 
 abstract contract Ownable is Context {
@@ -69,10 +65,11 @@ abstract contract Ownable is Context {
      * NOTE: Renouncing ownership will leave the contract without an owner,
      * thereby removing any functionality that is only available to the owner.
      */
+    /*
     function renounceOwnership() public virtual onlyOwner {
         _transferOwnership(address(0));
     }
-
+    */
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the current owner.
@@ -251,7 +248,13 @@ contract NFT is INFT, Ownable{
     //Admins list
     mapping (address => bool) public admins;
 
-    event bid(address _bidder, uint256 _bid);
+    event bid(
+        address _bidder,
+        uint256 _bid,
+        uint256 _round,
+        uint256 _start,
+        uint256 _duration
+    );
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -382,7 +385,6 @@ contract NFT is INFT, Ownable{
         payable(msg.sender).transfer(_revenue);
     }
 
-    //Remove after debbugin period
     function modifyArtworkInfo(string memory _artwork_name, string memory _newInfo) public onlyOwner
     {
         artworks[_artwork_name].propertyInfo = _newInfo;
@@ -456,8 +458,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyBronzeImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Bronze" );
         _tokenProperties[last_minted_id - 1].properties.push( toString(artworksMaxCap[_artwork_name].num_bronze - artworks[_artwork_name].num_bronze) );
-        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
-     //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];    
     }
 
     function buySilver(string calldata _artwork_name) public payable
@@ -476,8 +477,7 @@ contract NFT is INFT, Ownable{
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertySilverImage );
         _tokenProperties[last_minted_id - 1].properties.push( "Silver" );
         _tokenProperties[last_minted_id - 1].properties.push( toString(artworksMaxCap[_artwork_name].num_silver - artworks[_artwork_name].num_silver) );
-        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
-     //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];      
     }
 
     function buyOriginal(string calldata _artwork_name) public payable
@@ -485,10 +485,6 @@ contract NFT is INFT, Ownable{
         revenue += msg.value;
 
         require(original_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
-        if(original_auctions[_artwork_name].start_timestamp == 0)
-        {
-            startOriginalRound(_artwork_name);
-        }
         if(original_auctions[_artwork_name].start_timestamp + original_auctions[_artwork_name].duration < block.timestamp)
         {
             endOriginalRound(_artwork_name);
@@ -507,25 +503,26 @@ contract NFT is INFT, Ownable{
 
         original_auctions[_artwork_name].winner = msg.sender;
         original_auctions[_artwork_name].bet = msg.value;
-        emit bid(msg.sender,msg.value);
+        emit bid(
+            msg.sender,
+            msg.value,
+            artworksMaxCap[_artwork_name].num_original - artworks[_artwork_name].num_original + 1,
+            original_auctions[_artwork_name].start_timestamp,
+            original_auctions[_artwork_name].duration
+        );
     }
 
-    function startOriginalRound(string calldata _artwork_name) internal
+    function resetOriginalRound(string calldata _artwork_name) internal
     {
         original_auctions[_artwork_name].winner = address(0);
         original_auctions[_artwork_name].bet = 0;
-        original_auctions[_artwork_name].start_timestamp += original_auctions[_artwork_name].duration;
+        original_auctions[_artwork_name].start_timestamp = block.timestamp;
     }
 
     function endOriginalRound(string calldata _artwork_name) public
     {
         require(block.timestamp > original_auctions[_artwork_name].start_timestamp + original_auctions[_artwork_name].duration, "Auction is still in progress");
         artworks[_artwork_name].num_original--;
-
-        /*_mintNext(msg.sender);
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
-        */
 
         _mintNext(original_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
@@ -536,7 +533,7 @@ contract NFT is INFT, Ownable{
 
         if(artworks[_artwork_name].num_original != 0)
         {
-            startOriginalRound(_artwork_name);
+            resetOriginalRound(_artwork_name);
         }
     }
 
@@ -545,10 +542,6 @@ contract NFT is INFT, Ownable{
         revenue += msg.value;
 
         require(gold_auctions[_artwork_name].start_timestamp < block.timestamp, "Auction did not start yet");
-        if(gold_auctions[_artwork_name].start_timestamp == 0)
-        {
-            startGoldRound(_artwork_name);
-        }
         if(gold_auctions[_artwork_name].start_timestamp + gold_auctions[_artwork_name].duration < block.timestamp)
         {
             endGoldRound(_artwork_name);
@@ -567,25 +560,26 @@ contract NFT is INFT, Ownable{
 
         gold_auctions[_artwork_name].winner = msg.sender;
         gold_auctions[_artwork_name].bet = msg.value;
-        emit bid(msg.sender,msg.value);
+        emit bid(
+            msg.sender,
+            msg.value,
+            artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold + 1,
+            original_auctions[_artwork_name].start_timestamp,
+            original_auctions[_artwork_name].duration
+        );
     }
 
-    function startGoldRound(string calldata _artwork_name) internal
+    function resetGoldRound(string calldata _artwork_name) internal
     {
         gold_auctions[_artwork_name].winner = address(0);
         gold_auctions[_artwork_name].bet = 0;
-        gold_auctions[_artwork_name].start_timestamp += gold_auctions[_artwork_name].duration;
+        gold_auctions[_artwork_name].start_timestamp = block.timestamp;
     }
 
     function endGoldRound(string calldata _artwork_name) public
     {
         require(block.timestamp > gold_auctions[_artwork_name].start_timestamp + gold_auctions[_artwork_name].duration, "Auction is still in progress");
         artworks[_artwork_name].num_gold--;
-
-        /*_mintNext(msg.sender);
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
-        */
 
         _mintNext(gold_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
@@ -596,23 +590,9 @@ contract NFT is INFT, Ownable{
 
         if(artworks[_artwork_name].num_gold != 0)
         {
-            startGoldRound(_artwork_name);
+            resetGoldRound(_artwork_name);
         }
     }
-
-/*
-    function endGoldRound(string calldata _artwork_name) public
-    {
-        artworks[_artwork_name].num_gold--;
-        _mintNext(msg.sender);
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
-        if(artworks[_artwork_name].num_gold != 0)
-        {
-            startGoldRound(_artwork_name);
-        }
-    }
-    */
     
     modifier checkTrade(uint256 _tokenId)
     {
