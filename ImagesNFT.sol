@@ -29,10 +29,6 @@ abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
     }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
 }
 
 abstract contract Ownable is Context {
@@ -389,7 +385,6 @@ contract NFT is INFT, Ownable{
         payable(msg.sender).transfer(_revenue);
     }
 
-    //Remove after debbugin period
     function modifyArtworkInfo(string memory _artwork_name, string memory _newInfo) public onlyOwner
     {
         artworks[_artwork_name].propertyInfo = _newInfo;
@@ -598,20 +593,6 @@ contract NFT is INFT, Ownable{
             resetGoldRound(_artwork_name);
         }
     }
-
-    /*
-    function endGoldRound(string calldata _artwork_name) public
-    {
-        artworks[_artwork_name].num_gold--;
-        _mintNext(msg.sender);
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
-        _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
-        if(artworks[_artwork_name].num_gold != 0)
-        {
-            startGoldRound(_artwork_name);
-        }
-    }
-    */
     
     modifier checkTrade(uint256 _tokenId)
     {
