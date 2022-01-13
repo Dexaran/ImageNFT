@@ -538,7 +538,6 @@ contract NFT is INFT, Ownable{
 
         if(artworks[_artwork_name].num_original != 0)
         {
-            original_auctions[_artwork_name].start_timestamp += original_auctions[_artwork_name].duration;
             resetOriginalRound(_artwork_name);
         }
     }
@@ -596,7 +595,6 @@ contract NFT is INFT, Ownable{
 
         if(artworks[_artwork_name].num_gold != 0)
         {
-            gold_auctions[_artwork_name].start_timestamp += gold_auctions[_artwork_name].duration;
             resetGoldRound(_artwork_name);
         }
     }
