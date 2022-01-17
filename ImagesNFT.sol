@@ -232,6 +232,9 @@ contract NFT is INFT, Ownable{
     // Mapping owner address to token count
     mapping(address => uint256) public _balances;
 
+    // Mapping artwork address to artist fee level
+    mapping (string => uint32) public artworkFeeReceiver;
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
     constructor(string memory name_, string memory symbol_, uint256 _defaultFee) {
@@ -267,6 +270,15 @@ contract NFT is INFT, Ownable{
         original_auctions[_artwork_name].min_price = _originalMinPrice;
         original_auctions[_artwork_name].start_timestamp = _originalStartTimestamp;
 
+    }
+
+    function setArtistFeeLevels(uint32 _artistIndex, address _artistWallet, uint256 _artistFeePercentage) public onlyOwner{
+        feeLevels[_artistIndex].feeReceiver   = payable(_artistWallet);
+        feeLevels[_artistIndex].feePercentage = _artistFeePercentage;
+    }
+
+    function setArtworkFeeReceiver (string memory _artwork_name, uint32 _artistIndex) public onlyOwner{
+        artworkFeeReceiver[_artwork_name] = _artistIndex;
     }
 
     function addArtwork(string memory _artwork_name,
@@ -318,6 +330,10 @@ contract NFT is INFT, Ownable{
         artworks[_artwork_name].propertyInfo = _newInfo;
     }
 
+    function modifyTokenClass(uint256 _tokenId, string memory _tokenClass) public onlyOwner {
+       _tokenProperties[_tokenId].properties[2] = _tokenClass;  
+    }
+
     function updateAuctionDuration(string calldata _artwork_name,
                                                    uint256 _index, // 1 = gold, 0 = original.
                                                    uint256 _new_duration_in_seconds) public onlyOwner
@@ -344,6 +360,8 @@ contract NFT is INFT, Ownable{
         _mintNext(msg.sender);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyBronzeImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Bronze" );
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
 
@@ -359,6 +377,8 @@ contract NFT is INFT, Ownable{
         _mintNext(msg.sender);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertySilverImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Silver" );
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
      //   _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].property4 );      
     }
 
@@ -407,6 +427,8 @@ contract NFT is INFT, Ownable{
         _mintNext(original_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyOriginalImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Original" );
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_original != 0)
         {
@@ -459,6 +481,8 @@ contract NFT is INFT, Ownable{
         _mintNext(gold_auctions[_artwork_name].winner);
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyInfo );  
         _tokenProperties[last_minted_id - 1].properties.push( artworks[_artwork_name].propertyGoldImage );
+        _tokenProperties[last_minted_id - 1].properties.push( "Gold" );
+        _tokenFeeLevels[last_minted_id - 1] = artworkFeeReceiver[_artwork_name];
 
         if(artworks[_artwork_name].num_gold != 0)
         {
@@ -648,7 +672,7 @@ contract NFT is INFT, Ownable{
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(NFT.ownerOf(tokenId) == from, "NFT: transfer of token that is not own");
+        require(NFT.ownerOf(tokenId) == msg.sender, "NFT: transfer of token that is not own");
         require(to != address(0), "NFT: transfer to the zero address");
         
         _asks[tokenId] = 0; // Zero out price on transfer
