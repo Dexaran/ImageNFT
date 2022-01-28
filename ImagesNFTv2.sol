@@ -531,16 +531,16 @@ contract ExtendedNFT is INFT {
     uint256 private next_mint_id;
 
     // Token name
-    string public _name;
+    string internal _name;
 
     // Token symbol
-    string public _symbol;
+    string internal _symbol;
 
     // Mapping from token ID to owner address
-    mapping(uint256 => address) private _owners;
+    mapping(uint256 => address) internal _owners;
 
     // Mapping owner address to token count
-    mapping(address => uint256) private _balances;
+    mapping(address => uint256) internal _balances;
     
     modifier checkTrade(uint256 _tokenId)
     {
@@ -867,7 +867,7 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
 
 
 
-contract NFTSimpleAuction {
+contract NFTSimpleAuction is Ownable {
 
     address public nft_contract;
 
@@ -880,6 +880,11 @@ contract NFTSimpleAuction {
     uint public priceInWEI = 1e18; // 1 ether per NFT.
 
     address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
+
+    constructor()
+    {
+        _owner = msg.sender;
+    }
 
     function buyNFT() public payable
     {
@@ -896,7 +901,7 @@ contract NFTSimpleAuction {
 
     }
 
-    function withdrawRevenue() public
+    function withdrawRevenue() public onlyOwner
     {
         require(msg.sender == revenue, "This action requires revenue permission");
         revenue.transfer(address(this).balance);
