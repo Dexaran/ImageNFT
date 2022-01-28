@@ -890,7 +890,7 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
 }
 
 
-contract NFTMulticlassAuction is Ownable {
+contract NFTMulticlassLinearAuction is Ownable {
 
     address public nft_contract;
 
@@ -932,6 +932,8 @@ contract NFTMulticlassAuction is Ownable {
         require(msg.value >= priceInWEI_by_class[_nftClassID], "Insufficient funds");
         require(amount_sold_by_class[_nftClassID] < max_supply_by_class[_nftClassID], "This auction has already sold all allocated NFTs");
         require(block.timestamp < start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID], "This auction already expired");
+        require(block.timestamp > start_timestamp_by_class[_nftClassID], "This auction is not yet started");
+        require(priceInWEI_by_class[_nftClassID] != 0, "Min price is not configured by the owner");
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_nftClassID);
 
@@ -951,17 +953,22 @@ contract NFTMulticlassAuction is Ownable {
     }
 }
 
-contract NFTSimpleAuction is Ownable {
+
+contract NFTMulticlassBiddableAuction is Ownable {
 
     address public nft_contract;
 
-    uint256 public max_supply = 1; // This auction will sell exactly this number of NFTs.
-    uint256 public amount_sold = 0; // Increments on each successful NFT purchase until it reachess `max_supply`.
+    mapping (uint256 => uint256) public max_supply_by_class; // This auction will sell exactly this number of NFTs.
+    mapping (uint256 => uint256) public amount_sold_by_class; // Increments on each successful NFT purchase until it reachess `max_supply`.
 
-    uint256 public start_timestamp = 1643125054; // UNIX timestamp of the auction start event.
-    uint256 public duration = 3 days;
+    mapping (uint256 => uint256) public start_timestamp_by_class; // UNIX timestamp of the auction start event.
+    mapping (uint256 => uint256) public duration_by_class;
 
-    uint public priceInWEI = 1e18; // 1 ether per NFT.
+    mapping (uint256 => uint256) public min_priceInWEI_by_class;
+    mapping (uint256 => uint256) public highest_bid_by_class;
+    mapping (uint256 => address) public winner_by_class;
+
+    mapping (uint256 => string[]) public configuration_properties_by_class;
 
     address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
 
@@ -970,19 +977,83 @@ contract NFTSimpleAuction is Ownable {
         _owner = msg.sender;
     }
 
-    function buyNFT() public payable
+    function createNFTAuction(uint256 _classID, uint256 _max_supply, uint256 _start_timestamp, uint256 _duration, uint256 _minPriceInWEI /*, string[] memory _properties */) public onlyOwner
     {
-        require(msg.value >= priceInWEI, "Insufficient funds");
-        require(amount_sold < max_supply, "This auction has already sold all allocated NFTs");
+        max_supply_by_class[_classID]      = _max_supply;
+        amount_sold_by_class[_classID]     = 0;
+        start_timestamp_by_class[_classID] = _start_timestamp;
+        duration_by_class[_classID]        = _duration;
+        min_priceInWEI_by_class[_classID]      = _minPriceInWEI;
 
-        uint256 _mintedId = ExtendedNFT(nft_contract).mint();
-        configureNFT(_mintedId);
-        amount_sold++;
+        /* configuration_properties_by_class[_classID] = _properties; */
     }
 
-    function configureNFT(uint256 _tokenId) internal
+    function setNFTContract(address _nftContract) public onlyOwner
     {
+        nft_contract = _nftContract;
+    }
+    
+    function bidOnNFT(uint256 _nftClassID) public payable
+    {
+        require(msg.value >= min_priceInWEI_by_class[_nftClassID], "Insufficient funds");
 
+        require(start_timestamp_by_class[_nftClassID] < block.timestamp, "Auction did not start yet");
+        if(start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID] < block.timestamp)
+        {
+            endRound(_nftClassID);
+        }
+
+        require(max_supply_by_class[_nftClassID] > amount_sold_by_class[_nftClassID], "All NFTs of this artwork are already sold");
+
+        require(
+            msg.value >= highest_bid_by_class[_nftClassID] + highest_bid_by_class[_nftClassID]/20 && 
+            msg.value >= highest_bid_by_class[_nftClassID] + 1e18,
+            "Does not outbid current winner by 5%"
+        );
+        require(min_priceInWEI_by_class[_nftClassID] != 0, "Min price is not configured by the owner");
+        require(msg.value >= min_priceInWEI_by_class[_nftClassID], "Min price criteria is not met");
+
+        payable(winner_by_class[_nftClassID]).transfer(highest_bid_by_class[_nftClassID]);
+
+        winner_by_class[_nftClassID]      = msg.sender;
+        highest_bid_by_class[_nftClassID] = msg.value;
+
+        /*
+        emit bid(
+            msg.sender,
+            msg.value,
+            artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold + 1,
+            original_auctions[_artwork_name].start_timestamp,
+            original_auctions[_artwork_name].duration
+        );
+        */
+    }
+
+    function resetRound(uint256 _nftClassID) internal
+    {
+        winner_by_class[_nftClassID] = address(0);
+        highest_bid_by_class[_nftClassID] = 0;
+        start_timestamp_by_class[_nftClassID] = block.timestamp;
+    }
+
+    function endRound(uint256 _nftClassID) public
+    {
+        require(block.timestamp > start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID], "Auction is still in progress");
+        amount_sold_by_class[_nftClassID]++;
+
+        uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_nftClassID);
+        configureNFT(_mintedId, _nftClassID);
+        ClassifiedNFT(nft_contract).transfer(winner_by_class[_nftClassID], _mintedId, "");
+
+        if(amount_sold_by_class[_nftClassID] != max_supply_by_class[_nftClassID])
+        {
+            resetRound(_nftClassID);
+        }
+    }
+
+    function configureNFT(uint256 _tokenId, uint256 _classId) internal
+    {
+        // NFT-specific configuration
     }
 
     function withdrawRevenue() public onlyOwner
