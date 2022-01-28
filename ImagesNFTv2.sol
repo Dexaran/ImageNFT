@@ -67,6 +67,21 @@ abstract contract Ownable is Context {
     }
 }
 
+abstract contract MinterRole is Ownable {
+    mapping (address => bool) public minter_role;
+
+    function setMinterRole(address _who, bool _status) public onlyOwner
+    {
+        minter_role[_who] = _status;
+    }
+
+    modifier onlyMinter
+    {
+        require(minter_role[msg.sender], "Minter role required");
+        _;
+    }
+}
+
 //https://github.com/willitscale/solidity-util/blob/000a42d4d7c1491cde4381c29d4b775fa7e99aac/lib/Strings.sol#L317-L336
 
 /**
@@ -766,7 +781,7 @@ interface IClassifiedNFT is INFT {
 }
 
 
-abstract contract ClassifiedNFT is Ownable, ExtendedNFT, IClassifiedNFT {
+abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
     using Strings for string;
 
     mapping (uint256 => string[]) public class_properties;
@@ -834,10 +849,11 @@ abstract contract ClassifiedNFT is Ownable, ExtendedNFT, IClassifiedNFT {
         return class_properties[token_classes[_tokenID]][_propertyID];
     }
     
-    function mintWithClass(address to, uint256 tokenId, uint256 classId)  public onlyOwner onlyExistingClasses(classId)
+    function mintWithClass(uint256 classId)  public /* onlyOwner */ onlyExistingClasses(classId) onlyMinter returns (uint256 _newTokenID)
     {
-        _mint(to, tokenId);
-        token_classes[tokenId] = classId;
+        //_mint(to, tokenId);
+        _newTokenID = mint();
+        token_classes[_newTokenID] = classId;
     }
 
     function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
@@ -874,6 +890,66 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
 }
 
 
+contract NFTMulticlassAuction is Ownable {
+
+    address public nft_contract;
+
+    mapping (uint256 => uint256) public max_supply_by_class; // This auction will sell exactly this number of NFTs.
+    mapping (uint256 => uint256) public amount_sold_by_class; // Increments on each successful NFT purchase until it reachess `max_supply`.
+
+    mapping (uint256 => uint256) public start_timestamp_by_class; // UNIX timestamp of the auction start event.
+    mapping (uint256 => uint256) public duration_by_class;
+
+    mapping (uint256 => uint256) public priceInWEI_by_class;
+
+    mapping (uint256 => string[]) public configuration_properties_by_class;
+
+    address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
+
+    constructor()
+    {
+        _owner = msg.sender;
+    }
+
+    function createNFTAuction(uint256 _classID, uint256 _max_supply, uint256 _start_timestamp, uint256 _duration, uint256 _priceInWEI /*, string[] memory _properties */) public onlyOwner
+    {
+        max_supply_by_class[_classID]      = _max_supply;
+        amount_sold_by_class[_classID]     = 0;
+        start_timestamp_by_class[_classID] = _start_timestamp;
+        duration_by_class[_classID]        = _duration;
+        priceInWEI_by_class[_classID]      = _priceInWEI;
+
+        /* configuration_properties_by_class[_classID] = _properties; */
+    }
+
+    function setNFTContract(address _nftContract) public onlyOwner
+    {
+        nft_contract = _nftContract;
+    }
+
+    function buyNFT(uint256 _nftClassID) public payable
+    {
+        require(msg.value >= priceInWEI_by_class[_nftClassID], "Insufficient funds");
+        require(amount_sold_by_class[_nftClassID] < max_supply_by_class[_nftClassID], "This auction has already sold all allocated NFTs");
+        require(block.timestamp < start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID], "This auction already expired");
+
+        uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_nftClassID);
+
+        configureNFT(_mintedId, _nftClassID);
+        amount_sold_by_class[_nftClassID]++;
+    }
+
+    function configureNFT(uint256 _tokenId, uint256 _classId) internal
+    {
+        //token_classes[]
+    }
+
+    function withdrawRevenue() public onlyOwner
+    {
+        require(msg.sender == revenue, "This action requires revenue permission");
+        revenue.transfer(address(this).balance);
+    }
+}
 
 contract NFTSimpleAuction is Ownable {
 
