@@ -2,6 +2,70 @@
 
 pragma solidity ^0.8.0;
 
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+}
+
+abstract contract Ownable is Context {
+    address internal _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+    constructor() {
+        _transferOwnership(_msgSender());
+    }
+    */
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    /*
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+    */
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
 
 //https://github.com/willitscale/solidity-util/blob/000a42d4d7c1491cde4381c29d4b775fa7e99aac/lib/Strings.sol#L317-L336
 
@@ -702,7 +766,7 @@ interface IClassifiedNFT is INFT {
 }
 
 
-abstract contract ClassifiedNFT is ExtendedNFT, IClassifiedNFT {
+abstract contract ClassifiedNFT is Ownable, ExtendedNFT, IClassifiedNFT {
     using Strings for string;
 
     mapping (uint256 => string[]) public class_properties;
@@ -716,18 +780,18 @@ abstract contract ClassifiedNFT is ExtendedNFT, IClassifiedNFT {
         _;
     }
 
-    function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) public /* onlyOwner */
+    function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) public onlyOwner
     {
         token_classes[_tokenID] = _tokenClass;
     }
 
-    function addNewTokenClass() public /* onlyOwner */
+    function addNewTokenClass() public onlyOwner
     {
         class_properties[nextClassIndex].push("");
         nextClassIndex++;
     }
 
-    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public /* onlyOwner */ onlyExistingClasses(_classID)
+    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
     {
         class_properties[_classID][_propertyID] = _content;
     }
@@ -737,7 +801,7 @@ abstract contract ClassifiedNFT is ExtendedNFT, IClassifiedNFT {
         return class_properties[_classID][_propertyID];
     }
 
-    function addClassProperty(uint256 _classID) public /* onlyOwner */ onlyExistingClasses(_classID)
+    function addClassProperty(uint256 _classID) public onlyOwner onlyExistingClasses(_classID)
     {
         class_properties[_classID].push("");
     }
@@ -756,14 +820,19 @@ abstract contract ClassifiedNFT is ExtendedNFT, IClassifiedNFT {
     {
         return class_properties[token_classes[_tokenID]];
     }
+
+    function getClassPropertyForTokenID(uint256 _tokenID, uint256 _propertyID) public view onlyExistingClasses(token_classes[_tokenID]) returns (string memory)
+    {
+        return class_properties[token_classes[_tokenID]][_propertyID];
+    }
     
-    function mintWithClass(address to, uint256 tokenId, uint256 classId)  public /* onlyOwner */ onlyExistingClasses(classId)
+    function mintWithClass(address to, uint256 tokenId, uint256 classId)  public onlyOwner onlyExistingClasses(classId)
     {
         _mint(to, tokenId);
         token_classes[tokenId] = classId;
     }
 
-    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public /* onlyOwner */ onlyExistingClasses(_classID)
+    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
     {
         class_properties[_classID][_propertyID] = class_properties[_classID][_propertyID].concat(_content);
     }
