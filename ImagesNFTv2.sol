@@ -791,6 +791,14 @@ abstract contract ClassifiedNFT is Ownable, ExtendedNFT, IClassifiedNFT {
         nextClassIndex++;
     }
 
+    function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner
+    {
+        for (uint i = 0; i < _propertiesCount; i++)
+        {
+            class_properties[nextClassIndex].push("");
+        }
+    }
+
     function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
     {
         class_properties[_classID][_propertyID] = _content;
