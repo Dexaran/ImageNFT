@@ -531,10 +531,10 @@ contract ExtendedNFT is INFT {
     uint256 private next_mint_id;
 
     // Token name
-    string private _name;
+    string public _name;
 
     // Token symbol
-    string private _symbol;
+    string public _symbol;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
@@ -853,6 +853,16 @@ abstract contract VersionableNFT is ExtendedNFT {
 
 contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
 
+    function initialize(string memory name_, string memory symbol_, uint256 _defaultFee) external {
+        require(_owner == address(0), "Already initialized");
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), msg.sender);
+        bidLock = 1 days;
+        _name   = name_;
+        _symbol = symbol_;
+        feeLevels[0].feeReceiver   = payable(msg.sender);
+        feeLevels[0].feePercentage = _defaultFee;
+    }
 }
 
 
