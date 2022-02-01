@@ -974,6 +974,21 @@ contract NFTMulticlassBiddableAuction is Ownable {
 
     address public nft_contract;
 
+    struct NFTBiddableAuctionClass
+    {
+        uint256 max_supply;
+        uint256 amount_sold;
+        uint256 start_timestamp;
+        uint256 duration;
+        uint256 min_priceInWei;
+        uint256 highest_bid;
+        address winner;
+        string[] configuratin_properties;
+    }
+
+    mapping (uint256 => NFTBiddableAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
+                                                                  //  defining the auction for this token class.
+
     mapping (uint256 => uint256) public max_supply_by_class; // This auction will sell exactly this number of NFTs.
     mapping (uint256 => uint256) public amount_sold_by_class; // Increments on each successful NFT purchase until it reachess `max_supply`.
 
@@ -995,11 +1010,11 @@ contract NFTMulticlassBiddableAuction is Ownable {
 
     function createNFTAuction(uint256 _classID, uint256 _max_supply, uint256 _start_timestamp, uint256 _duration, uint256 _minPriceInWEI /*, string[] memory _properties */) public onlyOwner
     {
-        max_supply_by_class[_classID]      = _max_supply;
-        amount_sold_by_class[_classID]     = 0;
-        start_timestamp_by_class[_classID] = _start_timestamp;
-        duration_by_class[_classID]        = _duration;
-        min_priceInWEI_by_class[_classID]      = _minPriceInWEI;
+        auctions[_classID].max_supply      = _max_supply;
+        auctions[_classID].amount_sold     = 0;
+        auctions[_classID].start_timestamp = _start_timestamp;
+        auctions[_classID].duration        = _duration;
+        auctions[_classID].min_priceInWei  = _minPriceInWEI;
 
         /* configuration_properties_by_class[_classID] = _properties; */
     }
@@ -1009,30 +1024,30 @@ contract NFTMulticlassBiddableAuction is Ownable {
         nft_contract = _nftContract;
     }
     
-    function bidOnNFT(uint256 _nftClassID) public payable
+    function bidOnNFT(uint256 _classID) public payable
     {
-        require(msg.value >= min_priceInWEI_by_class[_nftClassID], "Insufficient funds");
+        require(msg.value >= auctions[_classID].min_priceInWei, "Insufficient funds");
 
-        require(start_timestamp_by_class[_nftClassID] < block.timestamp, "Auction did not start yet");
-        if(start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID] < block.timestamp)
+        require(auctions[_classID].start_timestamp < block.timestamp, "Auction did not start yet");
+        if(auctions[_classID].start_timestamp + auctions[_classID].duration < block.timestamp)
         {
-            endRound(_nftClassID);
+            endRound(_classID);
         }
 
-        require(max_supply_by_class[_nftClassID] > amount_sold_by_class[_nftClassID], "All NFTs of this artwork are already sold");
+        require(auctions[_classID].max_supply > auctions[_classID].amount_sold, "All NFTs of this artwork are already sold");
 
         require(
-            msg.value >= highest_bid_by_class[_nftClassID] + highest_bid_by_class[_nftClassID]/20 && 
-            msg.value >= highest_bid_by_class[_nftClassID] + 1e18,
+            msg.value >= auctions[_classID].highest_bid + auctions[_classID].highest_bid/20 && 
+            msg.value >= auctions[_classID].highest_bid + 1e18,
             "Does not outbid current winner by 5%"
         );
-        require(min_priceInWEI_by_class[_nftClassID] != 0, "Min price is not configured by the owner");
-        require(msg.value >= min_priceInWEI_by_class[_nftClassID], "Min price criteria is not met");
+        require(auctions[_classID].min_priceInWei != 0, "Min price is not configured by the owner");
+        require(msg.value >= auctions[_classID].min_priceInWei, "Min price criteria is not met");
 
-        payable(winner_by_class[_nftClassID]).transfer(highest_bid_by_class[_nftClassID]);
+        payable(auctions[_classID].winner).transfer(auctions[_classID].highest_bid);
 
-        winner_by_class[_nftClassID]      = msg.sender;
-        highest_bid_by_class[_nftClassID] = msg.value;
+        auctions[_classID].winner      = msg.sender;
+        auctions[_classID].highest_bid = msg.value;
 
         /*
         emit bid(
@@ -1045,25 +1060,25 @@ contract NFTMulticlassBiddableAuction is Ownable {
         */
     }
 
-    function resetRound(uint256 _nftClassID) internal
+    function resetRound(uint256 _classID) internal
     {
-        winner_by_class[_nftClassID] = address(0);
-        highest_bid_by_class[_nftClassID] = 0;
-        start_timestamp_by_class[_nftClassID] = block.timestamp;
+        auctions[_classID].winner          = address(0);
+        auctions[_classID].highest_bid     = 0;
+        auctions[_classID].start_timestamp = block.timestamp;
     }
 
-    function endRound(uint256 _nftClassID) public
+    function endRound(uint256 _classID) public
     {
-        require(block.timestamp > start_timestamp_by_class[_nftClassID] + duration_by_class[_nftClassID], "Auction is still in progress");
-        amount_sold_by_class[_nftClassID]++;
+        require(block.timestamp > auctions[_classID].start_timestamp + auctions[_classID].duration, "Auction is still in progress");
+        auctions[_classID].amount_sold++;
 
-        uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_nftClassID);
-        configureNFT(_mintedId, _nftClassID);
-        ClassifiedNFT(nft_contract).transfer(winner_by_class[_nftClassID], _mintedId, "");
+        uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
+        configureNFT(_mintedId, _classID);
+        ClassifiedNFT(nft_contract).transfer(auctions[_classID].winner, _mintedId, "");
 
-        if(amount_sold_by_class[_nftClassID] != max_supply_by_class[_nftClassID])
+        if(auctions[_classID].amount_sold != auctions[_classID].max_supply)
         {
-            resetRound(_nftClassID);
+            resetRound(_classID);
         }
     }
 
