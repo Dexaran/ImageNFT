@@ -907,16 +907,6 @@ contract NFTMulticlassLinearAuction is Ownable {
     mapping (uint256 => NFTAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
                                                           //  defining the auction for this token class.
 
-    mapping (uint256 => uint256) public max_supply_by_class; // This auction will sell exactly this number of NFTs.
-    mapping (uint256 => uint256) public amount_sold_by_class; // Increments on each successful NFT purchase until it reachess `max_supply`.
-
-    mapping (uint256 => uint256) public start_timestamp_by_class; // UNIX timestamp of the auction start event.
-    mapping (uint256 => uint256) public duration_by_class;
-
-    mapping (uint256 => uint256) public priceInWEI_by_class;
-
-    mapping (uint256 => string[]) public configuration_properties_by_class;
-
     address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
 
     constructor()
@@ -934,11 +924,11 @@ contract NFTMulticlassLinearAuction is Ownable {
         priceInWEI_by_class[_classID]      = _priceInWEI;
         */
 
-        auctions[_classID].max_supply = _max_supply;
-        auctions[_classID].amount_sold = 0;
+        auctions[_classID].max_supply      = _max_supply;
+        auctions[_classID].amount_sold     = 0;
         auctions[_classID].start_timestamp = _start_timestamp;
-        auctions[_classID].duration = _duration;
-        auctions[_classID].priceInWei = _priceInWEI;
+        auctions[_classID].duration        = _duration;
+        auctions[_classID].priceInWei      = _priceInWEI;
 
 
         /* configuration_properties_by_class[_classID] = _properties; */
@@ -964,7 +954,7 @@ contract NFTMulticlassLinearAuction is Ownable {
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
 
         configureNFT(_mintedId, _classID);
-        amount_sold_by_class[_classID]++;
+        auctions[_classID].amount_sold++;
     }
 
     function configureNFT(uint256 _tokenId, uint256 _classId) internal
