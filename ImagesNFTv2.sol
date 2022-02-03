@@ -561,7 +561,7 @@ contract ExtendedNFT is INFT {
     {
         _;
         (uint256 _bid, address payable _bidder,) = bidOf(_tokenId);
-        if(priceOf(_tokenId) <= _bid)
+        if(priceOf(_tokenId) > 0 && priceOf(_tokenId) <= _bid)
         {
             uint256 _reward = _bid - _claimFee(_bid, _tokenId);
             payable(ownerOf(_tokenId)).transfer(_reward);
@@ -639,6 +639,10 @@ contract ExtendedNFT is INFT {
         return owner;
     }
     
+    /* 
+        Price == 0, "NFT not on sale"
+        Price > 0, "NFT on sale"
+    */
     function setPrice(uint256 _tokenId, uint256 _amountInWEI) checkTrade(_tokenId) public virtual override {
         require(ownerOf(_tokenId) == msg.sender, "Setting asks is only allowed for owned NFTs!");
         _asks[_tokenId] = _amountInWEI;
