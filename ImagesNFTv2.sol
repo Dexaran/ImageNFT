@@ -904,8 +904,22 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
     }
 }
 
+contract ActivatedByOwner is Ownable {
+    bool public active = true;
 
-contract NFTMulticlassLinearAuction is Ownable {
+    function setActive(bool _active) public onlyOwner
+    {
+        active = _active;
+    }
+
+    modifier onlyActive
+    {
+        require(active, "This contract is deactivated by owner");
+        _;
+    }
+}
+
+contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
     address public nft_contract;
 
@@ -954,7 +968,7 @@ contract NFTMulticlassLinearAuction is Ownable {
         nft_contract = _nftContract;
     }
 
-    function buyNFT(uint256 _classID) public payable
+    function buyNFT(uint256 _classID) public payable onlyActive
     {
         // WARNING!
         // This function does not refund overpaid amount at the moment.
@@ -985,7 +999,7 @@ contract NFTMulticlassLinearAuction is Ownable {
 }
 
 
-contract NFTMulticlassBiddableAuction is Ownable {
+contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     address public nft_contract;
 
@@ -1039,7 +1053,7 @@ contract NFTMulticlassBiddableAuction is Ownable {
         nft_contract = _nftContract;
     }
     
-    function bidOnNFT(uint256 _classID) public payable
+    function bidOnNFT(uint256 _classID) public payable onlyActive
     {
         require(msg.value >= auctions[_classID].min_priceInWei, "Insufficient funds");
 
