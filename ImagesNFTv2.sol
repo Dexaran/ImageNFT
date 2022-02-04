@@ -561,7 +561,7 @@ contract ExtendedNFT is INFT {
     {
         _;
         (uint256 _bid, address payable _bidder,) = bidOf(_tokenId);
-        if(priceOf(_tokenId) <= _bid)
+        if(priceOf(_tokenId) > 0 && priceOf(_tokenId) <= _bid)
         {
             uint256 _reward = _bid - _claimFee(_bid, _tokenId);
             payable(ownerOf(_tokenId)).transfer(_reward);
@@ -639,6 +639,10 @@ contract ExtendedNFT is INFT {
         return owner;
     }
     
+    /* 
+        Price == 0, "NFT not on sale"
+        Price > 0, "NFT on sale"
+    */
     function setPrice(uint256 _tokenId, uint256 _amountInWEI) checkTrade(_tokenId) public virtual override {
         require(ownerOf(_tokenId) == msg.sender, "Setting asks is only allowed for owned NFTs!");
         _asks[_tokenId] = _amountInWEI;
@@ -777,7 +781,18 @@ contract ExtendedNFT is INFT {
 }
 
 interface IClassifiedNFT is INFT {
-    
+    function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) external;
+    function addNewTokenClass() external;
+    function addTokenClassProperties(uint256 _propertiesCount) external;
+    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) external;
+    function getClassProperty(uint256 _classID, uint256 _propertyID) external view returns (string memory);
+    function addClassProperty(uint256 _classID) external;
+    function getClassProperties(uint256 _classID) external view returns (string[] memory);
+    function getClassForTokenID(uint256 _tokenID) external view returns (uint256);
+    function getClassPropertiesForTokenID(uint256 _tokenID) external view returns (string[] memory);
+    function getClassPropertyForTokenID(uint256 _tokenID, uint256 _propertyID) external view returns (string memory);
+    function mintWithClass(uint256 classId)  external  returns (uint256 _newTokenID);
+    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) external;
 }
 
 
