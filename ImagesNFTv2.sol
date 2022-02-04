@@ -810,18 +810,18 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         _;
     }
 
-    function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) public onlyOwner
+    function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) public onlyOwner override
     {
         token_classes[_tokenID] = _tokenClass;
     }
 
-    function addNewTokenClass() public onlyOwner
+    function addNewTokenClass() public onlyOwner override
     {
         class_properties[nextClassIndex].push("");
         nextClassIndex++;
     }
 
-    function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner
+    function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner override
     {
         for (uint i = 0; i < _propertiesCount; i++)
         {
@@ -829,49 +829,49 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         }
     }
 
-    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
+    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID][_propertyID] = _content;
     }
 
-    function getClassProperty(uint256 _classID, uint256 _propertyID) public view onlyExistingClasses(_classID) returns (string memory)
+    function getClassProperty(uint256 _classID, uint256 _propertyID) public view onlyExistingClasses(_classID) override returns (string memory)
     {
         return class_properties[_classID][_propertyID];
     }
 
-    function addClassProperty(uint256 _classID) public onlyOwner onlyExistingClasses(_classID)
+    function addClassProperty(uint256 _classID) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID].push("");
     }
 
-    function getClassProperties(uint256 _classID) public view onlyExistingClasses(_classID) returns (string[] memory)
+    function getClassProperties(uint256 _classID) public view onlyExistingClasses(_classID) override returns (string[] memory)
     {
         return class_properties[_classID];
     }
 
-    function getClassForTokenID(uint256 _tokenID) public view onlyExistingClasses(token_classes[_tokenID]) returns (uint256)
+    function getClassForTokenID(uint256 _tokenID) public view onlyExistingClasses(token_classes[_tokenID]) override returns (uint256)
     {
         return token_classes[_tokenID];
     }
 
-    function getClassPropertiesForTokenID(uint256 _tokenID) public view onlyExistingClasses(token_classes[_tokenID]) returns (string[] memory)
+    function getClassPropertiesForTokenID(uint256 _tokenID) public view onlyExistingClasses(token_classes[_tokenID]) override returns (string[] memory)
     {
         return class_properties[token_classes[_tokenID]];
     }
 
-    function getClassPropertyForTokenID(uint256 _tokenID, uint256 _propertyID) public view onlyExistingClasses(token_classes[_tokenID]) returns (string memory)
+    function getClassPropertyForTokenID(uint256 _tokenID, uint256 _propertyID) public view onlyExistingClasses(token_classes[_tokenID]) override returns (string memory)
     {
         return class_properties[token_classes[_tokenID]][_propertyID];
     }
     
-    function mintWithClass(uint256 classId)  public /* onlyOwner */ onlyExistingClasses(classId) onlyMinter returns (uint256 _newTokenID)
+    function mintWithClass(uint256 classId)  public /* onlyOwner */ onlyExistingClasses(classId) onlyMinter override returns (uint256 _newTokenID)
     {
         //_mint(to, tokenId);
         _newTokenID = mint();
         token_classes[_newTokenID] = classId;
     }
 
-    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID)
+    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID][_propertyID] = class_properties[_classID][_propertyID].concat(_content);
     }
