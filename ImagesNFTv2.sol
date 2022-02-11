@@ -978,13 +978,13 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
         // TODO
 
         require(msg.value >= auctions[_classID].priceInWei, "Insufficient funds");
-        require(auctions[_classID].amount_sold < auctions[_classID].max_supply, "This auction has already sold all allocated NFTs");
+        require(auctions[_classID].amount_sold <= auctions[_classID].max_supply, "This auction has already sold all allocated NFTs");
         require(block.timestamp < auctions[_classID].start_timestamp + auctions[_classID].duration, "This auction already expired");
         require(block.timestamp > auctions[_classID].start_timestamp, "This auction is not yet started");
         require(auctions[_classID].priceInWei != 0, "Min price is not configured by the owner");
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
-
+        ClassifiedNFT(nft_contract).transfer(msg.sender, _mintedId, "");
         configureNFT(_mintedId, _classID);
         auctions[_classID].amount_sold++;
     }
