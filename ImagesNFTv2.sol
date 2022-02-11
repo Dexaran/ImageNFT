@@ -924,6 +924,12 @@ contract ActivatedByOwner is Ownable {
 
 contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
+    event AuctionCreated(uint256 indexed tokenClassAuctionID, uint256 timestamp);
+    event TokenSold(uint256 indexed tokenID, uint256 indexed tokenClassID, address indexed buyer);
+    event NFTContractSet(address indexed newNFTContract, address indexed oldNFTContract);
+    event RevenueWithdrawal(uint256 amount);
+    
+
     address public nft_contract;
 
     struct NFTAuctionClass
@@ -964,10 +970,14 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
 
         /* configuration_properties_by_class[_classID] = _properties; */
+
+        emit AuctionCreated(_classID, block.timestamp);
     }
 
     function setNFTContract(address _nftContract) public onlyOwner
     {
+        emit NFTContractSet(_nftContract, nft_contract);
+
         nft_contract = _nftContract;
     }
 
@@ -987,6 +997,10 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
         ClassifiedNFT(nft_contract).transfer(msg.sender, _mintedId, "");
         configureNFT(_mintedId, _classID);
         auctions[_classID].amount_sold++;
+
+        ClassifiedNFT(nft_contract).transfer(msg.sender, _mintedId, "");
+
+        emit TokenSold(_mintedId, _classID, msg.sender);
     }
 
     function configureNFT(uint256 _tokenId, uint256 _classId) internal
@@ -997,12 +1011,22 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     function withdrawRevenue() public onlyOwner
     {
         require(msg.sender == revenue, "This action requires revenue permission");
+
+        emit RevenueWithdrawal(address(this).balance);
+
         revenue.transfer(address(this).balance);
     }
 }
 
 
 contract NFTMulticlassBiddableAuction is ActivatedByOwner {
+
+    event AuctionCreated(uint256 indexed tokenClassAuctionID, uint256 timestamp);
+    //event TokenSold(uint256 indexed tokenID, uint256 indexed tokenClassID, address indexed buyer);
+    event NFTContractSet(address indexed newNFTContract, address indexed oldNFTContract);
+    event RevenueWithdrawal(uint256 amount);
+    event RoundEnd(uint256 indexed tokenClassAuctionID, address indexed winner, uint256 indexed acquiredTokenID);
+    event NewRound(uint256 indexed tokenClassAuctionID, uint256 indexed startTimestamp, uint256 indexed endTimestamp);
 
     address public nft_contract;
 
@@ -1049,10 +1073,14 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         auctions[_classID].min_priceInWei  = _minPriceInWEI;
 
         /* configuration_properties_by_class[_classID] = _properties; */
+
+        emit AuctionCreated(_classID, block.timestamp);
     }
 
     function setNFTContract(address _nftContract) public onlyOwner
     {
+        emit NFTContractSet(nft_contract, _nftContract);
+
         nft_contract = _nftContract;
     }
     
@@ -1097,6 +1125,8 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         auctions[_classID].winner          = address(0);
         auctions[_classID].highest_bid     = 0;
         auctions[_classID].start_timestamp = block.timestamp;
+
+        emit NewRound(_classID, block.timestamp, auctions[_classID].start_timestamp + auctions[_classID].duration);
     }
 
     function endRound(uint256 _classID) public
@@ -1106,7 +1136,10 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
         configureNFT(_mintedId, _classID);
+
         ClassifiedNFT(nft_contract).transfer(auctions[_classID].winner, _mintedId, "");
+
+        emit RoundEnd(_classID, auctions[_classID].winner, _mintedId);
 
         if(auctions[_classID].amount_sold != auctions[_classID].max_supply)
         {
@@ -1122,6 +1155,9 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     function withdrawRevenue() public onlyOwner
     {
         require(msg.sender == revenue, "This action requires revenue permission");
+
+        emit RevenueWithdrawal(address(this).balance);
+
         revenue.transfer(address(this).balance);
     }
 }
