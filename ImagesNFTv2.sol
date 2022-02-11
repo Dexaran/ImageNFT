@@ -987,6 +987,8 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
         configureNFT(_mintedId, _classID);
         auctions[_classID].amount_sold++;
+
+        ClassifiedNFT(nft_contract).transfer(msg.sender, _mintedId, "");
     }
 
     function configureNFT(uint256 _tokenId, uint256 _classId) internal
@@ -1106,6 +1108,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
         configureNFT(_mintedId, _classID);
+
         ClassifiedNFT(nft_contract).transfer(auctions[_classID].winner, _mintedId, "");
 
         if(auctions[_classID].amount_sold != auctions[_classID].max_supply)
