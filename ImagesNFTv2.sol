@@ -544,7 +544,7 @@ contract ExtendedNFT is INFT {
     mapping (uint256 => Bid)     private _bids; // tokenID => price of this token (in WEI)
     mapping (uint256 => uint32)  private _tokenFeeLevels; // tokenID => level ID / 0 by default
 
-    uint256 private next_mint_id;
+    uint256 public next_mint_id;
 
     // Token name
     string internal _name;
@@ -805,7 +805,7 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
     mapping (uint256 => string[]) public class_properties;
     mapping (uint256 => uint256)  public token_classes;
 
-    uint256 private nextClassIndex = 0;
+    uint256 public nextClassIndex = 0;
 
     modifier onlyExistingClasses(uint256 classId)
     {
@@ -994,7 +994,6 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
         require(auctions[_classID].priceInWei != 0, "Min price is not configured by the owner");
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
-        ClassifiedNFT(nft_contract).transfer(msg.sender, _mintedId, "");
         configureNFT(_mintedId, _classID);
         auctions[_classID].amount_sold++;
 
@@ -1005,7 +1004,9 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
     function configureNFT(uint256 _tokenId, uint256 _classId) internal
     {
-        //token_classes[]
+        //Add Serial Number to the created Token
+        uint256 tokenSerialNumber = auctions[_classId].amount_sold + 1;
+        ExtendedNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1015,6 +1016,28 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
         emit RevenueWithdrawal(address(this).balance);
 
         revenue.transfer(address(this).balance);
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        // Inspired by OraclizeAPI's implementation - MIT licence
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol#L15-L35
+
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }
 
@@ -1149,7 +1172,9 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     function configureNFT(uint256 _tokenId, uint256 _classId) internal
     {
-        // NFT-specific configuration
+        //Add Serial Number to the created Token
+        uint256 tokenSerialNumber = auctions[_classId].amount_sold;
+        ExtendedNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1159,5 +1184,27 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         emit RevenueWithdrawal(address(this).balance);
 
         revenue.transfer(address(this).balance);
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        // Inspired by OraclizeAPI's implementation - MIT licence
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol#L15-L35
+
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }
