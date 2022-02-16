@@ -614,19 +614,19 @@ contract ExtendedNFT is INFT {
         return _tokenProperties[_tokenId].properties[_propertyId];
     }
 
-    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public /* onlyOwner or onlyTokenOwner */
+    function _addPropertyWithContent(uint256 _tokenId, string calldata _content) internal
     {
         // Check permission criteria
 
         _tokenProperties[_tokenId].properties.push(_content);
     }
 
-    function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public /* onlyOwner or onlyTokenOwner*/
+    function _modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) internal
     {
         _tokenProperties[_tokenId].properties[_propertyId] = _content;
     }
 
-    function appendProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public /* onlyOwner or onlyTokenOwner*/
+    function _appendProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) internal
     {
         _tokenProperties[_tokenId].properties[_propertyId] = _tokenProperties[_tokenId].properties[_propertyId].concat(_content);
     }
@@ -915,6 +915,21 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
         feeLevels[0].feeReceiver   = payable(msg.sender);
         feeLevels[0].feePercentage = _defaultFee;
     }
+
+    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
+    {
+        _addPropertyWithContent( _tokenId, _content);
+    }
+
+    function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
+    {
+        _modifyProperty(_tokenId, _propertyId, _content);
+    }
+
+    function appendProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
+    {
+        _appendProperty(_tokenId, _propertyId, _content);
+    }
 }
 
 contract ActivatedByOwner is Ownable {
@@ -1016,7 +1031,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold + 1;
-        ExtendedNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1184,7 +1199,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ExtendedNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
