@@ -586,6 +586,8 @@ contract ExtendedNFT is INFT {
         _safeMint(msg.sender, next_mint_id);
         _mintedId = next_mint_id;
         next_mint_id++;
+
+        _configureNFT(_mintedId);
     }
     
     function priceOf(uint256 _tokenId) public view virtual override returns (uint256)
@@ -781,6 +783,14 @@ contract ExtendedNFT is INFT {
         address to,
         uint256 tokenId
     ) internal virtual {}
+
+    function _configureNFT(uint256 _tokenId) internal
+    {
+        if(_tokenProperties[_tokenId].properties.length == 0)
+        {
+            _tokenProperties[_tokenId].properties.push("");
+        }
+    }
 }
 
 interface IClassifiedNFT is INFT {
