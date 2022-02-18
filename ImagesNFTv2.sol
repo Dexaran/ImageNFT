@@ -1016,7 +1016,18 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
         _appendProperty(_tokenId, _propertyId, _content);
     }
 
-    //function mint()
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override
+    {
+        if(token_versions[tokenId] < relevantVersion)
+        {
+            selfUpdate(tokenId);
+            
+        }
+    }
 }
 
 contract ActivatedByOwner is Ownable {
