@@ -1129,7 +1129,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     function setNFTContract(address _nftContract) public onlyOwner
     {
-        emit NFTContractSet(nft_contract, _nftContract);
+        emit NFTContractSet(_nftContract, nft_contract);
 
         nft_contract = _nftContract;
     }
