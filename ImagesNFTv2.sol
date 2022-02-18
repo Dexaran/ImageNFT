@@ -617,6 +617,8 @@ contract ExtendedNFT is INFT, ReentrancyGuard {
     // Mapping owner address to token count
     mapping(address => uint256) internal _balances;
     
+
+    // Reward is always paid based on BID
     modifier checkTrade(uint256 _tokenId)
     {
         _;
@@ -1187,6 +1189,8 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     mapping (uint256 => string[]) public configuration_properties_by_class;
 
+    uint256 public revenue_amount; // total amount of revenue
+
     address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
 
     constructor()
@@ -1238,16 +1242,6 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         auctions[_classID].winner      = msg.sender;
         auctions[_classID].highest_bid = msg.value;
-
-        /*
-        emit bid(
-            msg.sender,
-            msg.value,
-            artworksMaxCap[_artwork_name].num_gold - artworks[_artwork_name].num_gold + 1,
-            original_auctions[_artwork_name].start_timestamp,
-            original_auctions[_artwork_name].duration
-        );
-        */
     }
 
     function resetRound(uint256 _classID) internal
@@ -1270,6 +1264,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         ClassifiedNFT(nft_contract).transfer(auctions[_classID].winner, _mintedId, "");
 
         emit RoundEnd(_classID, auctions[_classID].winner, _mintedId);
+        revenue_amount += auctions[_classID].highest_bid;
 
         if(auctions[_classID].amount_sold != auctions[_classID].max_supply)
         {
@@ -1290,7 +1285,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         emit RevenueWithdrawal(address(this).balance);
 
-        revenue.transfer(address(this).balance);
+        revenue.transfer(revenue_amount);
     }
 
     function toString(uint256 value) internal pure returns (string memory) {
