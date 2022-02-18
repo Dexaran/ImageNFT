@@ -1001,6 +1001,16 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
         feeLevels[0].feePercentage = _defaultFee;
     }
 
+    function NextUpdate() public onlyOwner
+    {
+        relevantVersion++;
+    }
+
+    function setPropertyToClass(string memory _propertyText, uint256 _newClassID) public onlyOwner
+    {
+        property_to_class[_propertyText] = _newClassID;
+    }
+
     function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
     {
         _addPropertyWithContent( _tokenId, _content);
