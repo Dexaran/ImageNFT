@@ -581,7 +581,7 @@ contract ExtendedNFT is INFT {
         return "NFT X";
     }
 
-    function mint() public /* onlyOwner or onlyAdmin */ returns (uint256 _mintedId)
+    function mint() internal /* onlyOwner or onlyAdmin */ returns (uint256 _mintedId)
     {
         _safeMint(msg.sender, next_mint_id);
         _mintedId = next_mint_id;
@@ -930,6 +930,8 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
     {
         _appendProperty(_tokenId, _propertyId, _content);
     }
+
+    //function mint()
 }
 
 contract ActivatedByOwner is Ownable {
