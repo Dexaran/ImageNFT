@@ -1,6 +1,64 @@
 // SPDX-License-Identifier: GPL
 
 pragma solidity ^0.8.0;
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+abstract contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+}
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
@@ -474,6 +532,11 @@ library Address {
 }
 
 interface INFT {
+
+    event NewBid       (uint256 indexed tokenID, uint256 indexed bidAmount, bytes bidData);
+    event TokenTrade   (uint256 indexed tokenID, address indexed new_owner, address indexed previous_owner, uint256 priceInWEI);
+    event Transfer     (address indexed from, address indexed to, uint256 indexed tokenId);
+    event TransferData (bytes data);
     
     struct Properties {
         
@@ -514,13 +577,9 @@ abstract contract NFTReceiver {
 
 // ExtendedNFT is a version of the CallistoNFT standard token
 // that implements a set of function for NFT content management
-contract ExtendedNFT is INFT {
+contract ExtendedNFT is INFT, ReentrancyGuard {
     using Strings for string;
     using Address for address;
-    
-    event NewBid       (uint256 indexed tokenID, uint256 indexed bidAmount, bytes bidData);
-    event Transfer     (address indexed from, address indexed to, uint256 indexed tokenId);
-    event TransferData (bytes data);
     
     mapping (uint256 => Properties) private _tokenProperties;
     mapping (uint32 => Fee)         public feeLevels; // level # => (fee receiver, fee percentage)
@@ -565,6 +624,9 @@ contract ExtendedNFT is INFT {
         if(priceOf(_tokenId) > 0 && priceOf(_tokenId) <= _bid)
         {
             uint256 _reward = _bid - _claimFee(_bid, _tokenId);
+
+            emit TokenTrade(_tokenId, _bidder, ownerOf(_tokenId), _reward);
+
             payable(ownerOf(_tokenId)).transfer(_reward);
             delete _bids[_tokenId];
             delete _asks[_tokenId];
@@ -646,29 +708,47 @@ contract ExtendedNFT is INFT {
         Price == 0, "NFT not on sale"
         Price > 0, "NFT on sale"
     */
-    function setPrice(uint256 _tokenId, uint256 _amountInWEI) checkTrade(_tokenId) public virtual override {
+    function setPrice(uint256 _tokenId, uint256 _amountInWEI) checkTrade(_tokenId) public virtual override nonReentrant {
         require(ownerOf(_tokenId) == msg.sender, "Setting asks is only allowed for owned NFTs!");
         _asks[_tokenId] = _amountInWEI;
     }
     
-    function setBid(uint256 _tokenId, bytes calldata _data) payable checkTrade(_tokenId) public virtual override
+    function setBid(uint256 _tokenId, bytes calldata _data) payable checkTrade(_tokenId) public virtual override nonReentrant
     {
         (uint256 _previousBid, address payable _previousBidder, ) = bidOf(_tokenId);
         require(msg.value > _previousBid, "New bid must exceed the existing one");
+
+        uint256 _bid;
         
         // Return previous bid if the current one exceeds it.
         if(_previousBid != 0)
         {
             _previousBidder.transfer(_previousBid);
         }
-        _bids[_tokenId].amountInWEI = msg.value;
+        // Refund overpaid amount.
+        if (priceOf(_tokenId) < msg.value)
+        {
+            _bid = priceOf(_tokenId);
+        }
+        else
+        {
+            _bid = msg.value;
+        }
+        _bids[_tokenId].amountInWEI = _bid;
         _bids[_tokenId].bidder      = payable(msg.sender);
         _bids[_tokenId].timestamp   = block.timestamp;
+
+        emit NewBid(_tokenId, _bid, _data);
         
-        emit NewBid(_tokenId, msg.value, _data);
+        // Send back overpaid amount.
+        // WARHNING: Creates possibility for reentrancy.
+        if (priceOf(_tokenId) < msg.value)
+        {
+            payable(msg.sender).transfer(msg.value - priceOf(_tokenId));
+        }
     }
     
-    function withdrawBid(uint256 _tokenId) public virtual override returns (bool)
+    function withdrawBid(uint256 _tokenId) public virtual override nonReentrant returns (bool) 
     {
         (uint256 _bid, address payable _bidder, uint256 _timestamp) = bidOf(_tokenId);
         require(msg.sender == _bidder, "Can not withdraw someone elses bid");
@@ -1129,7 +1209,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     function setNFTContract(address _nftContract) public onlyOwner
     {
-        emit NFTContractSet(_nftContract, nft_contract);
+        emit NFTContractSet(nft_contract, _nftContract);
 
         nft_contract = _nftContract;
     }
