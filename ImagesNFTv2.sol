@@ -1034,8 +1034,11 @@ contract ArtefinNFT is ExtendedNFT, VersionableNFT, ClassifiedNFT {
     {
         if(token_versions[tokenId] < relevantVersion)
         {
-            selfUpdate(tokenId);
-            setClassForTokenID(tokenId, property_to_class[getTokenProperties(tokenId).properties[0]]);
+            if(token_classes[tokenId] == 0)
+            {
+                selfUpdate(tokenId);
+                setClassForTokenID(tokenId, property_to_class[getTokenProperties(tokenId).properties[0]]);
+            }
         }
     }
 }
