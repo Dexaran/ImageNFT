@@ -635,10 +635,6 @@ contract ExtendedNFT is INFT, ReentrancyGuard {
             delete _bids[_tokenId];
             delete _asks[_tokenId];
             _transfer(ownerOf(_tokenId), _bidder, _tokenId, _empty);
-            /*if(address(_bidder).isContract())
-            {
-                NFTReceiver(_bidder).onERC721Received(address(this), ownerOf(_tokenId), _tokenId, hex"000000");
-            }*/
         }
     }
     
