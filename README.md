@@ -2,6 +2,14 @@
 
 This repo provides the reference codes for implementation of NFT smart-contracts that govern the behavior of collectible units.
 
+This contracts represent a set of NFTs that contain recorded data in JSON format on-chain. NFTs can be grouped in "classes" to refer to class-related metadata which is shared among the NFTs belonging to one class (this optimizes on-chain data usage). User can also record his own metadata in text format to his owned NFT.
+
+Owner of the contract can create new classes at the contract and assign them to an Auction. Auctions sell NFTs according to the chosen rules. There can be two types of auctions - Linear and Biddable.
+
+Linear auctions allow users to buy NFTs at a fixed price stright from the contract.
+
+Biddable auctions allow users to bid on NFTs and the highest bid wins after fixed time period.
+
 # Structure
 
 - [ImagesNFT.sol](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFT.sol) - this is an old version of the contract. It is kept for documentation purposes and it will be removed in the future
