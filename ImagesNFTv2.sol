@@ -1285,7 +1285,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         auctions[_classID].winner          = owner();
         auctions[_classID].highest_bid     = 0;
-        auctions[_classID].start_timestamp = block.timestamp;
+        auctions[_classID].start_timestamp = block.timestamp + 600;
 
         emit NewRound(_classID, block.timestamp, auctions[_classID].start_timestamp + auctions[_classID].duration);
     }
