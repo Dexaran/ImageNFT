@@ -18,7 +18,7 @@ Biddable auctions allow users to bid on NFTs and the highest bid wins after fixe
 
 - [Proxy.sol](https://github.com/Dexaran/ImageNFT/blob/main/Proxy.sol) - upgradeable proxy to keep contracts upgradeable during the development process.
 
-# Deployment
+# Deployment (contracts)
 
 Solidity version 0.8.0. These contracts are designed to work with Ethereum Virtual Machine and therefore the contracts can be compiled and deployed to any chain that supports EVM including Binance Smart Chain, Ethereum CLassic, TRX, Callisto Network, PIRL etc.
 
@@ -27,3 +27,11 @@ Deployment process must be as follows:
 1. Pick a contract and compile it (ImagesNFTv2.sol) - the relevant contract is [contract ArtefinNFT](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1011-L1064). Deploy the bytecode of the contract to a desired network (mainnet or testnet).
 2. Compile the Proxy.sol - the relevant contract is [NFTUpgradeableProxy](https://github.com/Dexaran/ImageNFT/blob/main/Proxy.sol#L458-L463)
 3. Deploy the compiled Proxy contract and assign constructor parameters - `admin` is the owner address, `logic` is the address of the ImagesNFTv2 contract created at step 1, `data` is a special value that encodes the initialization call, data must be `b119490e000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000074172746566696e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000034152540000000000000000000000000000000000000000000000000000000000` in case of this particular contracts. The proxy contract automatically calls [initialize()](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1013-L1022) upon creation.
+
+# Deployment (auctions)
+
+1. Replace the [hardcoded address of the revenue receiver](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1241) with your address.
+2. Compile [Linear Auction code](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1081) or [Biddable Auction code](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1201)
+3. Deploy the compiled code to the desired network.
+4. Configure the NFT contract with the [setNFTContract](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L1261-L1266) function.
+5. In order to be allowed to create NFTs the auction contract must be assigned the "Minter Role". Assign the minter permissions to the Auction contract address created at step 3 with the [setMinterRole](https://github.com/Dexaran/ImageNFT/blob/main/ImagesNFTv2.sol#L131-L134) function at the NFT contract.
