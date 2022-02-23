@@ -643,7 +643,7 @@ contract ExtendedNFT is INFT, ReentrancyGuard {
         return "NFT X";
     }
 
-    function mint() internal /** onlyOwner*/ returns (uint256 _mintedId)
+    function mint() internal returns (uint256 _mintedId)
     {
         _safeMint(msg.sender, next_mint_id);
         _mintedId = next_mint_id;
@@ -929,13 +929,13 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         token_classes[_tokenID] = _tokenClass;
     }
 
-    function addNewTokenClass() public /** onlyOwner */ override
+    function addNewTokenClass() public onlyOwner override
     {
         class_properties[nextClassIndex].push("");
         nextClassIndex++;
     }
 
-    function addTokenClassProperties(uint256 _propertiesCount) public /** onlyOwner */ override
+    function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner override
     {
         for (uint i = 0; i < _propertiesCount; i++)
         {
@@ -943,7 +943,7 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         }
     }
 
-    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public /** onlyOwner */ onlyExistingClasses(_classID) override
+    function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID][_propertyID] = _content;
     }
@@ -953,7 +953,7 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         return class_properties[_classID][_propertyID];
     }
 
-    function addClassProperty(uint256 _classID) public /** onlyOwner */ onlyExistingClasses(_classID) override
+    function addClassProperty(uint256 _classID) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID].push("");
     }
@@ -978,14 +978,14 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         return class_properties[token_classes[_tokenID]][_propertyID];
     }
     
-    function mintWithClass(uint256 classId)  public /** onlyOwner */ onlyExistingClasses(classId) onlyMinter override returns (uint256 _newTokenID)
+    function mintWithClass(uint256 classId)  public onlyExistingClasses(classId) onlyMinter override returns (uint256 _newTokenID)
     {
         //_mint(to, tokenId);
         _newTokenID = mint();
         token_classes[_newTokenID] = classId;
     }
 
-    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public /** onlyOwner */ onlyExistingClasses(_classID) override
+    function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID) override
     {
         class_properties[_classID][_propertyID] = class_properties[_classID][_propertyID].concat(_content);
     }
@@ -1004,22 +1004,22 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         feeLevels[0].feePercentage = _defaultFee;
     }
 
-    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public /** onlyOwner */
+    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
     {
         _addPropertyWithContent( _tokenId, _content);
     }
 
-    function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public /** onlyOwner */
+    function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
     {
         _modifyProperty(_tokenId, _propertyId, _content);
     }
 
-    function appendProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public /** onlyOwner */
+    function appendProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
     {
         _appendProperty(_tokenId, _propertyId, _content);
     }
 
-    function migrationMint (address to, uint256 _tokenId, uint256 _classID, string calldata _serialNumber) public /** onlyOwner */ {
+    function migrationMint (address to, uint256 _tokenId, uint256 _classID, string calldata _serialNumber) public onlyMinter {
         require(to != address(0), "NFT: mint to the zero address");
         require(!_exists(_tokenId), "NFT: token already minted");
 
@@ -1033,7 +1033,7 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         emit Transfer(address(0), to, _tokenId);
     }
 
-    function setNextMintD (uint256 _next_mint_id) public /** onlyOwner */ {
+    function setNextMintID (uint256 _next_mint_id) public onlyOwner {
         require(_next_mint_id > next_mint_id, "next_mint_id must be higher than last token ID");
         next_mint_id = _next_mint_id;
     }
@@ -1235,6 +1235,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         auctions[_classID].start_timestamp = _start_timestamp;
         auctions[_classID].duration        = _duration;
         auctions[_classID].min_priceInWei  = _minPriceInWEI;
+        auctions[_classID].winner          = owner();
 
         emit AuctionCreated(_classID, block.timestamp);
     }
@@ -1252,33 +1253,37 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     
     function bidOnNFT(uint256 _classID) public payable onlyActive
     {
-        require(msg.value >= auctions[_classID].min_priceInWei, "Insufficient funds");
 
+        uint256 _bid = msg.value;
+
+        require(_bid >= auctions[_classID].min_priceInWei, "Min price criteria is not met");
         require(auctions[_classID].start_timestamp < block.timestamp, "Auction did not start yet");
+
         if(auctions[_classID].start_timestamp + auctions[_classID].duration < block.timestamp)
         {
             endRound(_classID);
+            payable(msg.sender).transfer(_bid - auctions[_classID].min_priceInWei);
+            _bid = auctions[_classID].min_priceInWei;
         }
 
         require(auctions[_classID].max_supply > auctions[_classID].amount_sold, "All NFTs of this artwork are already sold");
 
         require(
-            msg.value >= auctions[_classID].highest_bid + auctions[_classID].highest_bid/20 && 
-            msg.value >= auctions[_classID].highest_bid + 1e18,
+            _bid >= auctions[_classID].highest_bid + auctions[_classID].highest_bid/20 && 
+            _bid >= auctions[_classID].highest_bid + 1e18,
             "Does not outbid current winner by 5%"
         );
         require(auctions[_classID].min_priceInWei != 0, "Min price is not configured by the owner");
-        require(msg.value >= auctions[_classID].min_priceInWei, "Min price criteria is not met");
 
         payable(auctions[_classID].winner).transfer(auctions[_classID].highest_bid);
 
         auctions[_classID].winner      = msg.sender;
-        auctions[_classID].highest_bid = msg.value;
+        auctions[_classID].highest_bid = _bid;
     }
 
     function resetRound(uint256 _classID) internal
     {
-        auctions[_classID].winner          = address(0);
+        auctions[_classID].winner          = owner();
         auctions[_classID].highest_bid     = 0;
         auctions[_classID].start_timestamp = block.timestamp;
 
