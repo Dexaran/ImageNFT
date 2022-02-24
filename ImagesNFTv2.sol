@@ -1320,9 +1320,13 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         require(msg.sender == revenue, "This action requires revenue permission");
 
-        emit RevenueWithdrawal(address(this).balance);
+        uint256 toPay = revenue_amount;
 
-        revenue.transfer(revenue_amount);
+        revenue_amount = 0;
+
+        revenue.transfer(toPay);
+
+        emit RevenueWithdrawal(toPay);
     }
 
     function toString(uint256 value) internal pure returns (string memory) {
