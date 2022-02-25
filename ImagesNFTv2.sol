@@ -531,7 +531,7 @@ library Address {
     }
 }
 
-interface INFT {
+interface ICallistoNFT {
 
     event NewBid       (uint256 indexed tokenID, uint256 indexed bidAmount, bytes bidData);
     event TokenTrade   (uint256 indexed tokenID, address indexed new_owner, address indexed previous_owner, uint256 priceInWEI);
@@ -569,6 +569,9 @@ interface INFT {
     function setBid(uint256 _tokenId, bytes calldata _data) payable external; // bid amount is defined by msg.value
     function setPrice(uint256 _tokenId, uint256 _amountInWEI, bytes calldata _data) external;
     function withdrawBid(uint256 _tokenId) external returns (bool);
+
+    function getUserContent(uint256 _tokenId) external view returns (string memory _content, bool _all);
+    function setUserContent(uint256 _tokenId, string calldata _content) external returns (bool);
 }
 
 abstract contract NFTReceiver {
@@ -577,7 +580,7 @@ abstract contract NFTReceiver {
 
 // ExtendedNFT is a version of the CallistoNFT standard token
 // that implements a set of function for NFT content management
-contract ExtendedNFT is INFT, ReentrancyGuard {
+contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
     using Strings for string;
     using Address for address;
     
@@ -674,6 +677,18 @@ contract ExtendedNFT is INFT, ReentrancyGuard {
     function getTokenProperty(uint256 _tokenId, uint256 _propertyId)  public view virtual returns (string memory)
     {
         return _tokenProperties[_tokenId].properties[_propertyId];
+    }
+
+    function getUserContent(uint256 _tokenId) public view virtual override returns (string memory _content, bool _all)
+    {
+        return (_tokenProperties[_tokenId].properties[0], true);
+    }
+
+    function setUserContent(uint256 _tokenId, string calldata _content) public virtual override returns (bool success)
+    {
+        require(msg.sender == ownerOf(_tokenId), "NFT: only owner can change NFT content");
+        _tokenProperties[_tokenId].properties[0] = _content;
+        return true;
     }
 
     function _addPropertyWithContent(uint256 _tokenId, string calldata _content) internal
@@ -895,7 +910,7 @@ contract ExtendedNFT is INFT, ReentrancyGuard {
     }
 }
 
-interface IClassifiedNFT is INFT {
+interface IClassifiedNFT is ICallistoNFT {
     function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) external;
     function addNewTokenClass() external;
     function addTokenClassProperties(uint256 _propertiesCount) external;
@@ -1287,7 +1302,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         auctions[_classID].highest_bid     = 0;
         auctions[_classID].start_timestamp = block.timestamp + 600;
 
-        emit NewRound(_classID, block.timestamp, auctions[_classID].start_timestamp + auctions[_classID].duration);
+        emit NewRound(_classID, auctions[_classID].start_timestamp, auctions[_classID].start_timestamp + auctions[_classID].duration);
     }
 
     function endRound(uint256 _classID) public
