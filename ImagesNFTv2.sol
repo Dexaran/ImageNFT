@@ -1214,19 +1214,6 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
     mapping (uint256 => NFTBiddableAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
                                                                   //  defining the auction for this token class.
-
-    mapping (uint256 => uint256) public max_supply_by_class; // This auction will sell exactly this number of NFTs.
-    mapping (uint256 => uint256) public amount_sold_by_class; // Increments on each successful NFT purchase until it reachess `max_supply`.
-
-    mapping (uint256 => uint256) public start_timestamp_by_class; // UNIX timestamp of the auction start event.
-    mapping (uint256 => uint256) public duration_by_class;
-
-    mapping (uint256 => uint256) public min_priceInWEI_by_class;
-    mapping (uint256 => uint256) public highest_bid_by_class;
-    mapping (uint256 => address) public winner_by_class;
-
-    mapping (uint256 => string[]) public configuration_properties_by_class;
-
     uint256 public revenue_amount; // total amount of revenue
 
     address payable public revenue = payable(0x01000B5fE61411C466b70631d7fF070187179Bbf); // This address has the rights to withdraw funds from the auction.
