@@ -643,7 +643,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
     
     function standard() public view virtual override returns (string memory)
     {
-        return "NFT X";
+        return "CallistoNFT";
     }
 
     function mint() internal returns (uint256 _mintedId)
