@@ -604,7 +604,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
     
     mapping (uint256 => uint256) private _asks; // tokenID => price of this token (in WEI)
     mapping (uint256 => Bid)     private _bids; // tokenID => price of this token (in WEI)
-    mapping (uint256 => uint32)  private _tokenFeeLevels; // tokenID => level ID / 0 by default
+    mapping (uint256 => uint32)  internal _tokenFeeLevels; // tokenID => level ID / 0 by default
 
     uint256 public next_mint_id;
 
@@ -643,7 +643,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
     
     function standard() public view virtual override returns (string memory)
     {
-        return "NFT X";
+        return "CallistoNFT";
     }
 
     function mint() internal returns (uint256 _mintedId)
@@ -912,7 +912,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
 
 interface IClassifiedNFT is ICallistoNFT {
     function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) external;
-    function addNewTokenClass() external;
+    function addNewTokenClass(uint32 _feeLevel) external;
     function addTokenClassProperties(uint256 _propertiesCount) external;
     function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) external;
     function getClassProperty(uint256 _classID, uint256 _propertyID) external view returns (string memory);
@@ -929,6 +929,7 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
     using Strings for string;
 
     mapping (uint256 => string[]) public class_properties;
+    mapping (uint256 => uint32)   public class_feeLevel;
     mapping (uint256 => uint256)  public token_classes;
 
     uint256 public nextClassIndex = 0;
@@ -944,9 +945,11 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         token_classes[_tokenID] = _tokenClass;
     }
 
-    function addNewTokenClass() public onlyOwner override
+    function addNewTokenClass(uint32 _feeLevel) public onlyOwner override
     {
         class_properties[nextClassIndex].push("");
+        class_feeLevel[nextClassIndex] = _feeLevel; // Configures who will receive fees from this class of NFTs
+                                                    // Zero sets fees to default address and percentage.
         nextClassIndex++;
     }
 
@@ -998,6 +1001,7 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         //_mint(to, tokenId);
         _newTokenID = mint();
         token_classes[_newTokenID] = classId;
+        _tokenFeeLevels[_newTokenID] = class_feeLevel[classId];
     }
 
     function appendClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) public onlyOwner onlyExistingClasses(_classID) override
@@ -1017,6 +1021,17 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         _symbol = symbol_;
         feeLevels[0].feeReceiver   = payable(msg.sender);
         feeLevels[0].feePercentage = _defaultFee;
+    }
+
+    function setFeeLevel(uint32 _levelIndex, address _feeReceiver, uint256 _feePercentage) public onlyOwner
+    {
+        feeLevels[_levelIndex].feeReceiver = payable(_feeReceiver);
+        feeLevels[_levelIndex].feePercentage = _feePercentage;
+    }
+
+    function setFeeLevelForToken(uint256 _tokenId, uint32 _feeLevel) public onlyOwner
+    {
+        _tokenFeeLevels[_tokenId] = _feeLevel;
     }
 
     function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
