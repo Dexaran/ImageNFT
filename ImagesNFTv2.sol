@@ -1039,6 +1039,7 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         require(!_exists(_tokenId), "NFT: token already minted");
 
         _beforeTokenTransfer(address(0), to, _tokenId);
+        _configureNFT(_tokenId);
 
         token_classes[_tokenId] = _classID;
         addPropertyWithContent(_tokenId, _serialNumber);
@@ -1212,6 +1213,16 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         string[] configuratin_properties;
     }
 
+    struct NFTBidClass
+    {
+        uint256 classID;
+        uint256 bid_amount;
+        uint256 bid_timestamp;
+        uint256 auctions_end_timestamp;
+    }
+
+    mapping (address => NFTBidClass[]) public bidsPerAddress;
+
     mapping (uint256 => NFTBiddableAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
                                                                   //  defining the auction for this token class.
     uint256 public revenue_amount; // total amount of revenue
@@ -1281,6 +1292,16 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         auctions[_classID].winner      = msg.sender;
         auctions[_classID].highest_bid = _bid;
+
+        NFTBidClass memory bid;
+
+        bid.classID = _classID;
+        bid.bid_amount = _bid;
+        bid.bid_timestamp = block.timestamp;
+        bid.auctions_end_timestamp = auctions[_classID].start_timestamp + auctions[_classID].duration;
+
+        bidsPerAddress[msg.sender].push(bid);
+
     }
 
     function resetRound(uint256 _classID) internal
@@ -1329,6 +1350,10 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         revenue.transfer(toPay);
 
         emit RevenueWithdrawal(toPay);
+    }
+
+    function getAddressBids (address _bidder_address) public view returns (NFTBidClass[] memory){
+        return bidsPerAddress[_bidder_address];
     }
 
     function toString(uint256 value) internal pure returns (string memory) {
