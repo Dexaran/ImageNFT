@@ -953,12 +953,6 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         nextClassIndex++;
     }
 
-    function modifyClassFeeLevel(uint32 _feeLevel, uint256 classId) public onlyOwner
-    {
-        class_feeLevel[classId] = _feeLevel; // Configures who will receive fees from this class of NFTs
-                                                    // Zero sets fees to default address and percentage.
-    }
-
     function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner override
     {
         for (uint i = 0; i < _propertiesCount; i++)
