@@ -1040,6 +1040,11 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         _tokenFeeLevels[_tokenId] = _feeLevel;
     }
 
+    function modifyClassFeeLevel(uint256 _classId, uint32 _feeLevel) public onlyOwner
+    {
+        class_feeLevel[_classId] = _feeLevel;
+    }
+
     function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
     {
         _addPropertyWithContent( _tokenId, _content);
