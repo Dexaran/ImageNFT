@@ -1044,6 +1044,11 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         _addPropertyWithContent( _tokenId, _content);
     }
 
+    function addPropertyWithContentForMinter(uint256 _tokenId, string calldata _content) public onlyMinter
+    {
+        _addPropertyWithContent( _tokenId, _content);
+    }
+
     function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
     {
         _modifyProperty(_tokenId, _propertyId, _content);
@@ -1176,7 +1181,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1237,12 +1242,13 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     struct NFTBidClass
     {
         uint256 classID;
+        address owner;
         uint256 bid_amount;
         uint256 bid_timestamp;
-        uint256 auctions_end_timestamp;
     }
 
-    mapping (address => NFTBidClass[]) public bidsPerAddress;
+    mapping (uint256 => NFTBidClass) public bids; // Mapping all bids
+    uint256 public nextBidIndex = 0; //Bids index
 
     mapping (uint256 => NFTBiddableAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
                                                                   //  defining the auction for this token class.
@@ -1314,14 +1320,12 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         auctions[_classID].winner      = msg.sender;
         auctions[_classID].highest_bid = _bid;
 
-        NFTBidClass memory bid;
+        bids[nextBidIndex].classID = _classID;
+        bids[nextBidIndex].owner = msg.sender;
+        bids[nextBidIndex].bid_amount = _bid;
+        bids[nextBidIndex].bid_timestamp = block.timestamp;
 
-        bid.classID = _classID;
-        bid.bid_amount = _bid;
-        bid.bid_timestamp = block.timestamp;
-        bid.auctions_end_timestamp = auctions[_classID].start_timestamp + auctions[_classID].duration;
-
-        bidsPerAddress[msg.sender].push(bid);
+        nextBidIndex++;
 
     }
 
@@ -1358,7 +1362,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1372,10 +1376,6 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         revenue.transfer(toPay);
 
         emit RevenueWithdrawal(toPay);
-    }
-
-    function getAddressBids (address _bidder_address) public view returns (NFTBidClass[] memory){
-        return bidsPerAddress[_bidder_address];
     }
 
     function toString(uint256 value) internal pure returns (string memory) {
