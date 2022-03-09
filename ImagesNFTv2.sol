@@ -570,7 +570,7 @@ interface ICallistoNFT {
     function setPrice(uint256 _tokenId, uint256 _amountInWEI, bytes calldata _data) external;
     function withdrawBid(uint256 _tokenId) external returns (bool);
 
-    function getUserContent(uint256 _tokenId) external view returns (string memory _content, bool _all);
+    function getUserContent(uint256 _tokenId) external view returns (string memory _content);
     function setUserContent(uint256 _tokenId, string calldata _content) external returns (bool);
 }
 
@@ -679,9 +679,9 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
         return _tokenProperties[_tokenId].properties[_propertyId];
     }
 
-    function getUserContent(uint256 _tokenId) public view virtual override returns (string memory _content, bool _all)
+    function getUserContent(uint256 _tokenId) public view virtual override returns (string memory _content)
     {
-        return (_tokenProperties[_tokenId].properties[0], true);
+        return (_tokenProperties[_tokenId].properties[0]);
     }
 
     function setUserContent(uint256 _tokenId, string calldata _content) public virtual override returns (bool success)
@@ -889,7 +889,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
 
         if(to.isContract())
         {
-            NFTReceiver(to).onERC721Received(msg.sender, msg.sender, tokenId, data);
+            NFTReceiver(to).onERC721Received(msg.sender, from, tokenId, data);
         }
 
         emit Transfer(from, to, tokenId);
@@ -912,8 +912,8 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
 
 interface IClassifiedNFT is ICallistoNFT {
     function setClassForTokenID(uint256 _tokenID, uint256 _tokenClass) external;
-    function addNewTokenClass(uint32 _feeLevel) external;
-    function addTokenClassProperties(uint256 _propertiesCount) external;
+    function addNewTokenClass(uint32 _feeLevel, string memory _property) external;
+    function addTokenClassProperties(uint256 _propertiesCount, uint256 classId) external;
     function modifyClassProperty(uint256 _classID, uint256 _propertyID, string memory _content) external;
     function getClassProperty(uint256 _classID, uint256 _propertyID) external view returns (string memory);
     function addClassProperty(uint256 _classID) external;
@@ -945,19 +945,19 @@ abstract contract ClassifiedNFT is MinterRole, ExtendedNFT, IClassifiedNFT {
         token_classes[_tokenID] = _tokenClass;
     }
 
-    function addNewTokenClass(uint32 _feeLevel) public onlyOwner override
+    function addNewTokenClass(uint32 _feeLevel, string memory _property) public onlyOwner override
     {
-        class_properties[nextClassIndex].push("");
+        class_properties[nextClassIndex].push(_property);
         class_feeLevel[nextClassIndex] = _feeLevel; // Configures who will receive fees from this class of NFTs
                                                     // Zero sets fees to default address and percentage.
         nextClassIndex++;
     }
 
-    function addTokenClassProperties(uint256 _propertiesCount) public onlyOwner override
+    function addTokenClassProperties(uint256 _propertiesCount, uint256 classId) public onlyOwner override
     {
         for (uint i = 0; i < _propertiesCount; i++)
         {
-            class_properties[nextClassIndex].push("");
+            class_properties[classId].push("");
         }
     }
 
@@ -1044,6 +1044,11 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         _addPropertyWithContent( _tokenId, _content);
     }
 
+    function addPropertyWithContentForMinter(uint256 _tokenId, string calldata _content) public onlyMinter
+    {
+        _addPropertyWithContent( _tokenId, _content);
+    }
+
     function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
     {
         _modifyProperty(_tokenId, _propertyId, _content);
@@ -1059,9 +1064,11 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         require(!_exists(_tokenId), "NFT: token already minted");
 
         _beforeTokenTransfer(address(0), to, _tokenId);
+        _configureNFT(_tokenId);
 
         token_classes[_tokenId] = _classID;
-        addPropertyWithContent(_tokenId, _serialNumber);
+        _tokenFeeLevels[_tokenId] = class_feeLevel[_classID];
+        _addPropertyWithContent(_tokenId, _serialNumber);
         _balances[to] += 1;
         _owners[_tokenId] = to;
 
@@ -1174,7 +1181,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1231,6 +1238,17 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         address winner;
         string[] configuratin_properties;
     }
+
+    struct NFTBidClass
+    {
+        uint256 classID;
+        address owner;
+        uint256 bid_amount;
+        uint256 bid_timestamp;
+    }
+
+    mapping (uint256 => NFTBidClass) public bids; // Mapping all bids
+    uint256 public nextBidIndex = 0; //Bids index
 
     mapping (uint256 => NFTBiddableAuctionClass) public auctions; // Mapping from classID (at NFT contract) to set of variables
                                                                   //  defining the auction for this token class.
@@ -1301,6 +1319,14 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         auctions[_classID].winner      = msg.sender;
         auctions[_classID].highest_bid = _bid;
+
+        bids[nextBidIndex].classID = _classID;
+        bids[nextBidIndex].owner = msg.sender;
+        bids[nextBidIndex].bid_amount = _bid;
+        bids[nextBidIndex].bid_timestamp = block.timestamp;
+
+        nextBidIndex++;
+
     }
 
     function resetRound(uint256 _classID) internal
@@ -1315,6 +1341,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     function endRound(uint256 _classID) public
     {
         require(block.timestamp > auctions[_classID].start_timestamp + auctions[_classID].duration, "Auction is still in progress");
+        require(auctions[_classID].max_supply > auctions[_classID].amount_sold, "All NFTs of this artwork are already sold");
         auctions[_classID].amount_sold++;
 
         uint256 _mintedId = ClassifiedNFT(nft_contract).mintWithClass(_classID);
@@ -1335,7 +1362,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
