@@ -1039,15 +1039,18 @@ contract ArtefinNFT is ExtendedNFT, ClassifiedNFT {
         class_feeLevel[_classId] = _feeLevel;
     }
 
-    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public onlyOwner
+    function addPropertyWithContent(uint256 _tokenId, string calldata _content) public /* onlyOwner or Minter */
     {
+        require(owner() == msg.sender || minter_role[msg.sender], "Ownable: caller is not the owner");
         _addPropertyWithContent( _tokenId, _content);
     }
 
+/*
     function addPropertyWithContentForMinter(uint256 _tokenId, string calldata _content) public onlyMinter
     {
         _addPropertyWithContent( _tokenId, _content);
     }
+    */
 
     function modifyProperty(uint256 _tokenId, uint256 _propertyId, string calldata _content) public onlyOwner
     {
@@ -1181,7 +1184,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
@@ -1362,7 +1365,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
         //Add Serial Number to the created Token
         uint256 tokenSerialNumber = auctions[_classId].amount_sold;
-        ArtefinNFT(nft_contract).addPropertyWithContentForMinter(_tokenId, toString(tokenSerialNumber));
+        ArtefinNFT(nft_contract).addPropertyWithContent(_tokenId, toString(tokenSerialNumber));
     }
 
     function withdrawRevenue() public onlyOwner
