@@ -632,7 +632,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
 
             emit TokenTrade(_tokenId, _bidder, ownerOf(_tokenId), _reward);
 
-            payable(ownerOf(_tokenId)).transfer(_reward);
+            bool sent = payable(ownerOf(_tokenId)).send(_reward);
 
             //bytes calldata _empty;
             delete _bids[_tokenId];
@@ -738,7 +738,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
         // Return previous bid if the current one exceeds it.
         if(_previousBid != 0)
         {
-            _previousBidder.transfer(_previousBid);
+            bool sent = _previousBidder.send(_previousBid);
         }
         // Refund overpaid amount.
         if (priceOf(_tokenId) < msg.value)
@@ -759,7 +759,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
         // WARHNING: Creates possibility for reentrancy.
         if (priceOf(_tokenId) < msg.value)
         {
-            payable(msg.sender).transfer(msg.value - priceOf(_tokenId));
+            bool sent = payable(msg.sender).send(msg.value - priceOf(_tokenId));
         }
     }
     
@@ -769,7 +769,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
         require(msg.sender == _bidder, "Can not withdraw someone elses bid");
         require(block.timestamp > _timestamp + bidLock, "Bid is time-locked");
         
-        _bidder.transfer(_bid);
+        bool sent = _bidder.send(_bid);
         delete _bids[_tokenId];
         return true;
     }
@@ -826,7 +826,7 @@ contract ExtendedNFT is ICallistoNFT, ReentrancyGuard {
         uint256 _feePercentage = feeLevels[_level].feePercentage;
         
         uint256 _feeAmount = _amountFrom * _feePercentage / 100000;
-        payable(_feeReceiver).transfer(_feeAmount);
+        bool sent = payable(_feeReceiver).send(_feeAmount);
         return _feeAmount;        
     }
     
@@ -1193,7 +1193,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
 
         emit RevenueWithdrawal(address(this).balance);
 
-        revenue.transfer(address(this).balance);
+        bool sent = revenue.send(address(this).balance);
     }
 
     function toString(uint256 value) internal pure returns (string memory) {
@@ -1219,7 +1219,7 @@ contract NFTMulticlassLinearAuction is ActivatedByOwner {
     }
 }
 
-contract NFTMulticlassBiddableAuction is ActivatedByOwner {
+contract NFTMulticlassBiddableAuction is ActivatedByOwner, ReentrancyGuard {
 
     event AuctionCreated(uint256 indexed tokenClassAuctionID, uint256 timestamp);
     //event TokenSold(uint256 indexed tokenID, uint256 indexed tokenClassID, address indexed buyer);
@@ -1298,6 +1298,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
     {
 
         uint256 _bid = msg.value;
+        bool sent;
 
         require(_bid >= auctions[_classID].min_priceInWei, "Min price criteria is not met");
         require(auctions[_classID].start_timestamp < block.timestamp, "Auction did not start yet");
@@ -1305,7 +1306,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         if(auctions[_classID].start_timestamp + auctions[_classID].duration < block.timestamp)
         {
             endRound(_classID);
-            payable(msg.sender).transfer(_bid - auctions[_classID].min_priceInWei);
+            sent = payable(msg.sender).send(_bid - auctions[_classID].min_priceInWei);
             _bid = auctions[_classID].min_priceInWei;
         }
 
@@ -1318,7 +1319,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         );
         require(auctions[_classID].min_priceInWei != 0, "Min price is not configured by the owner");
 
-        payable(auctions[_classID].winner).transfer(auctions[_classID].highest_bid);
+        sent = payable(auctions[_classID].winner).send(auctions[_classID].highest_bid);
 
         auctions[_classID].winner      = msg.sender;
         auctions[_classID].highest_bid = _bid;
@@ -1341,7 +1342,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
         emit NewRound(_classID, auctions[_classID].start_timestamp, auctions[_classID].start_timestamp + auctions[_classID].duration);
     }
 
-    function endRound(uint256 _classID) public
+    function endRound(uint256 _classID) public nonReentrant
     {
         require(block.timestamp > auctions[_classID].start_timestamp + auctions[_classID].duration, "Auction is still in progress");
         require(auctions[_classID].max_supply > auctions[_classID].amount_sold, "All NFTs of this artwork are already sold");
@@ -1376,7 +1377,7 @@ contract NFTMulticlassBiddableAuction is ActivatedByOwner {
 
         revenue_amount = 0;
 
-        revenue.transfer(toPay);
+        bool sent = revenue.send(toPay);
 
         emit RevenueWithdrawal(toPay);
     }
